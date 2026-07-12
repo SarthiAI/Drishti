@@ -3,7 +3,9 @@
 ## Reporting a vulnerability
 
 If you find a security issue in Drishti, please report it privately rather than
-opening a public issue. Email **das.chirotpal@gmail.com** with:
+opening a public issue. Use GitHub's private vulnerability reporting: open the
+repository's [Security tab](https://github.com/SarthiAI/Drishti/security) and
+click "Report a vulnerability". Please include:
 
 - a description of the issue and its impact,
 - steps to reproduce, and
