@@ -1,11 +1,15 @@
 [package]
-name = "drishti-regex"
+name = "sarthiai-drishti-regex"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Versioned PII regex recognizer set for Drishti content safety."
+
+# Published as `sarthiai-drishti-regex`; imported in code as `drishti_regex`.
+[lib]
+name = "drishti_regex"
 
 # Pure. The regex PII recognizer set. No I/O, no model, no dependency on core.
 [dependencies]

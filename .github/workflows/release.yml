@@ -3,10 +3,10 @@ name: release
 # One version tag deploys everything, everywhere.
 #
 # Pushing a `v*` tag (for example `v0.1.0`) builds and publishes, in one run:
-#   - PyPI: `drishti` (embedded PyO3 wheels, one abi3 wheel per platform + sdist)
-#   - PyPI: `drishti-sdk` (pure remote client SDK)
-#   - npm:  `@sarthiai/drishti-sdk` (remote client SDK, ESM + CJS + types)
-#   - crates.io: drishti-regex, drishti-core, drishti-models (in dependency order)
+#   - PyPI: `sarthiai-drishti` (embedded PyO3 wheels + sdist; imported as `drishti`)
+#   - PyPI: `sarthiai-drishti-sdk` (pure remote client SDK; imported as `drishti_sdk`)
+#   - npm:  `sarthiai-drishti-sdk` (remote client SDK, ESM + CJS + types)
+#   - crates.io: sarthiai-drishti-regex, sarthiai-drishti-core, sarthiai-drishti-models (dep order)
 #   - Docker Hub: `sarthiai/drishti` (multi-arch server image)
 #
 # All components share the tag version; the `guard` job fails the run early if
@@ -94,7 +94,7 @@ jobs:
           path: dist
 
   publish-drishti-pypi:
-    name: publish drishti to PyPI
+    name: publish sarthiai-drishti to PyPI
     needs: [drishti-wheels, drishti-sdist]
     runs-on: ubuntu-latest
     environment: pypi
@@ -109,11 +109,11 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-drishti-sdk-pypi:
-    name: publish drishti-sdk to PyPI
+    name: publish sarthiai-drishti-sdk to PyPI
     needs: guard
     runs-on: ubuntu-latest
     # Its OWN environment so the (Owner, Repo, Workflow, Environment) trusted-
-    # publisher tuple differs from the `drishti` package. See RELEASING.md.
+    # publisher tuple differs from the sarthiai-drishti package. See RELEASING.md.
     environment: pypi-drishti-sdk
     permissions:
       id-token: write
@@ -128,7 +128,7 @@ jobs:
           packages-dir: clients/python/dist
 
   publish-npm-sdk:
-    name: publish @sarthiai/drishti-sdk to npm
+    name: publish sarthiai-drishti-sdk to npm
     needs: guard
     runs-on: ubuntu-latest
     steps:
@@ -161,11 +161,11 @@ jobs:
           set -euo pipefail
           # regex has no internal deps; core depends on regex; models on core.
           # Sleep between to let the crates.io index propagate the new versions.
-          cargo publish -p drishti-regex
+          cargo publish -p sarthiai-drishti-regex
           sleep 45
-          cargo publish -p drishti-core
+          cargo publish -p sarthiai-drishti-core
           sleep 45
-          cargo publish -p drishti-models
+          cargo publish -p sarthiai-drishti-models
 
   docker:
     name: build and push sarthiai/drishti

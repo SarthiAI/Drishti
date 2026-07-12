@@ -12,8 +12,8 @@ path = "src/main.rs"
 # The HTTP service. A thin adapter over drishti-core (invariant I5). This is the
 # crate allowed to carry the async runtime and the web framework.
 [dependencies]
-drishti-core = { path = "../drishti-core" }
-drishti-models = { path = "../drishti-models" }
+drishti-core = { workspace = true }
+drishti-models = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 tower-http = { workspace = true }

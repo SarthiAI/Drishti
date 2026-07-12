@@ -1,11 +1,15 @@
 [package]
-name = "drishti-core"
+name = "sarthiai-drishti-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Core content-safety checks (prompt injection, PII, output safety) for LLM systems."
+
+# Published as `sarthiai-drishti-core`; imported in code as `drishti_core`.
+[lib]
+name = "drishti_core"
 
 # Detection logic and the public types. Carries ort + tokenizers (inference)
 # but NOT tokio, NOT an HTTP client, NOT pyo3. Model bytes arrive through the

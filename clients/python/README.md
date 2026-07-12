@@ -7,8 +7,11 @@ in-process embedded binding, use the separate `drishti` package.
 ## Install
 
 ```
-pip install drishti-sdk
+pip install sarthiai-drishti-sdk
 ```
+
+Imported as `drishti_sdk`. The distribution name is `sarthiai-drishti-sdk`
+because `drishti-sdk` is taken on PyPI.
 
 ## Use
 

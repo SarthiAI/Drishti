@@ -1,12 +1,12 @@
 {
-  "name": "@sarthiai/drishti-sdk",
+  "name": "sarthiai-drishti-sdk",
   "version": "0.1.0",
   "description": "Thin remote HTTP client (SDK) for a running drishti-server content-safety service",
   "license": "Elastic-2.0",
   "author": "Chirotpal Das",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SarthAI/Drishti"
+    "url": "https://github.com/SarthiAI/Drishti"
   },
   "type": "module",
   "types": "./dist/index.d.ts",

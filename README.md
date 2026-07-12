@@ -70,10 +70,10 @@ scores, and it lets your policy layer decide.
 Drishti is approaching its first tagged release. Published wheels and images will
 be available from the channels below; until then, build from source.
 
-**Python**
+**Python** (embedded, runs models in-process; imported as `drishti`)
 
 ```bash
-pip install drishti
+pip install sarthiai-drishti
 ```
 
 One abi3 wheel per platform covers Python 3.9 through 3.13, on Linux x86_64,
@@ -82,8 +82,8 @@ Linux ARM64, macOS ARM64 (Apple Silicon), and Windows x86_64.
 **Remote client SDKs** (call a running `drishti-server`, no model loaded locally)
 
 ```bash
-pip install drishti-sdk                 # Python
-npm install @sarthiai/drishti-sdk       # Node
+pip install sarthiai-drishti-sdk        # Python, imported as drishti_sdk
+npm install sarthiai-drishti-sdk        # Node
 ```
 
 **Docker**
@@ -98,7 +98,7 @@ Linux, so the host operating system does not matter.
 **From source**
 
 ```bash
-git clone https://github.com/SarthAI/Drishti
+git clone https://github.com/SarthiAI/Drishti
 cd Drishti
 cargo build --release          # builds the CLI and the server
 pip install maturin && maturin develop --release   # builds the Python wheel
@@ -253,7 +253,7 @@ curl -s -X POST http://localhost:8080/v1/check/pii \
 ```
 
 Prefer a typed client over raw HTTP? Remote client SDKs for Python
-(`drishti-sdk`) and Node (`@sarthiai/drishti-sdk`) live in [clients/](clients/),
+(`sarthiai-drishti-sdk`) and Node (`sarthiai-drishti-sdk`) live in [clients/](clients/),
 each with its own README. They call a running `drishti-server` and return typed
 results; they load no model themselves. This is distinct from the in-process
 Python package (`import drishti`) shown above, which runs the models locally.

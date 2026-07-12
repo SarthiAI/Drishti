@@ -3,9 +3,9 @@ requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
 
 [project]
-name = "drishti"
+name = "sarthiai-drishti"
 version = "0.1.0"
-description = "Content-safety checks (prompt injection, PII, output safety) for LLM systems."
+description = "Content-safety checks (prompt injection, PII, output safety) for LLM systems. Imported as `drishti`."
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/SarthAI/Drishti"
+Repository = "https://github.com/SarthiAI/Drishti"
 
 [tool.maturin]
 # Build the bindings crate out of the workspace, as an abi3 wheel.

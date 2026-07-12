@@ -1,4 +1,4 @@
-# @sarthiai/drishti-sdk (Node)
+# sarthiai-drishti-sdk (Node)
 
 A thin remote HTTP client for a running `drishti-server`. It calls the service
 over HTTP and returns typed results. It does not load any model.
@@ -6,13 +6,13 @@ over HTTP and returns typed results. It does not load any model.
 ## Install
 
 ```
-npm install @sarthiai/drishti-sdk
+npm install sarthiai-drishti-sdk
 ```
 
 ## Use
 
 ```ts
-import { DrishtiClient } from "@sarthiai/drishti-sdk";
+import { DrishtiClient } from "sarthiai-drishti-sdk";
 
 const client = new DrishtiClient("http://localhost:8080", { token: "secret" });
 

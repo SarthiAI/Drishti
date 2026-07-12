@@ -10,8 +10,8 @@ name = "drishti"
 path = "src/main.rs"
 
 [dependencies]
-drishti-core = { path = "../drishti-core" }
-drishti-models = { path = "../drishti-models" }
+drishti-core = { workspace = true }
+drishti-models = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 clap = { version = "4", features = ["derive"] }

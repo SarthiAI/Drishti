@@ -14,8 +14,8 @@ crate-type = ["cdylib", "rlib"]
 # Python bindings. A thin adapter over drishti-core (invariant I5). The only
 # crate allowed to carry pyo3.
 [dependencies]
-drishti-core = { path = "../drishti-core" }
-drishti-models = { path = "../drishti-models" }
+drishti-core = { workspace = true }
+drishti-models = { workspace = true }
 pyo3 = { workspace = true }
 pythonize = { workspace = true }
 futures = { workspace = true }

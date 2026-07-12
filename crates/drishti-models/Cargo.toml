@@ -1,11 +1,15 @@
 [package]
-name = "drishti-models"
+name = "sarthiai-drishti-models"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Model resolution, download, caching, and hash verification for Drishti."
+
+# Published as `sarthiai-drishti-models`; imported in code as `drishti_models`.
+[lib]
+name = "drishti_models"
 
 # Model resolution and caching. Implements the ModelSource trait from core.
 # This is the crate allowed to carry the HTTP client (download) and hashing.

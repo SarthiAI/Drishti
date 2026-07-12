@@ -13,8 +13,8 @@ path = "src/main.rs"
 # computes precision/recall/F1, applies the validated-vs-experimental bars, and
 # writes a reproducible JSON report. Not a published crate.
 [dependencies]
-drishti-core = { path = "../crates/drishti-core" }
-drishti-models = { path = "../crates/drishti-models" }
+drishti-core = { workspace = true }
+drishti-models = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 clap = { workspace = true }

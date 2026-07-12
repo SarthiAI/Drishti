@@ -35,13 +35,16 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
 license = "Elastic-2.0"
-repository = "https://github.com/SarthAI/Drishti"
+repository = "https://github.com/SarthiAI/Drishti"
 
 [workspace.dependencies]
-# Internal crates, path for local builds plus a version so they publish to
-# crates.io. Keep these versions in step with workspace.package.version above.
-drishti-regex = { path = "crates/drishti-regex", version = "0.1.0" }
-drishti-core = { path = "crates/drishti-core", version = "0.1.0" }
+# Internal crates. Published to crates.io as `sarthiai-drishti-*` (the plain
+# `drishti-*` brand is kept for the in-code names via the dep key and [lib] name,
+# so Rust source keeps using `drishti_core` etc.). Keep these versions in step
+# with workspace.package.version above.
+drishti-regex = { package = "sarthiai-drishti-regex", path = "crates/drishti-regex", version = "0.1.0" }
+drishti-core = { package = "sarthiai-drishti-core", path = "crates/drishti-core", version = "0.1.0" }
+drishti-models = { package = "sarthiai-drishti-models", path = "crates/drishti-models", version = "0.1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

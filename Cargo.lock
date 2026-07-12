@@ -499,25 +499,11 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "dotenvy",
- "drishti-core",
- "drishti-models",
  "futures",
+ "sarthiai-drishti-core",
+ "sarthiai-drishti-models",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "drishti-core"
-version = "0.1.0"
-dependencies = [
- "drishti-regex",
- "figment",
- "hex",
- "ort",
- "serde",
- "sha2",
- "thiserror",
- "tokenizers",
 ]
 
 [[package]]
@@ -526,9 +512,9 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "dotenvy",
- "drishti-core",
- "drishti-models",
  "futures",
+ "sarthiai-drishti-core",
+ "sarthiai-drishti-models",
  "serde",
  "serde_json",
 ]
@@ -538,29 +524,12 @@ name = "drishti-ffi-python"
 version = "0.1.0"
 dependencies = [
  "dotenvy",
- "drishti-core",
- "drishti-models",
  "futures",
  "pyo3",
  "pythonize",
+ "sarthiai-drishti-core",
+ "sarthiai-drishti-models",
  "serde",
-]
-
-[[package]]
-name = "drishti-models"
-version = "0.1.0"
-dependencies = [
- "drishti-core",
- "hex",
- "reqwest",
- "sha2",
-]
-
-[[package]]
-name = "drishti-regex"
-version = "0.1.0"
-dependencies = [
- "regex",
 ]
 
 [[package]]
@@ -570,9 +539,9 @@ dependencies = [
  "axum",
  "clap",
  "dotenvy",
- "drishti-core",
- "drishti-models",
  "futures",
+ "sarthiai-drishti-core",
+ "sarthiai-drishti-models",
  "serde",
  "serde_json",
  "tokio",
@@ -1913,6 +1882,37 @@ name = "ryu"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
+
+[[package]]
+name = "sarthiai-drishti-core"
+version = "0.1.0"
+dependencies = [
+ "figment",
+ "hex",
+ "ort",
+ "sarthiai-drishti-regex",
+ "serde",
+ "sha2",
+ "thiserror",
+ "tokenizers",
+]
+
+[[package]]
+name = "sarthiai-drishti-models"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "reqwest",
+ "sarthiai-drishti-core",
+ "sha2",
+]
+
+[[package]]
+name = "sarthiai-drishti-regex"
+version = "0.1.0"
+dependencies = [
+ "regex",
+]
 
 [[package]]
 name = "schannel"
