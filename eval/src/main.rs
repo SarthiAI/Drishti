@@ -40,6 +40,15 @@ struct Args {
     /// Where to write the JSON report.
     #[arg(long, default_value = "eval/results/latest.json")]
     out: PathBuf,
+    /// Label recorded in the report `dataset` field (e.g. "seed" or "full-benchmark").
+    #[arg(long, default_value = "seed")]
+    label: String,
+    /// Note recorded in the report describing the run.
+    #[arg(
+        long,
+        default_value = "Curated seed datasets, not the full public benchmarks. Runtime results remain labelled experimental until a path clears its bar on the full benchmarks and the cross-surface consumer harness."
+    )]
+    note: String,
 }
 
 // --- dataset record shapes ---
@@ -107,8 +116,8 @@ struct PiiReport {
 #[derive(Serialize)]
 struct Report {
     generated_unix: u64,
-    dataset: &'static str,
-    note: &'static str,
+    dataset: String,
+    note: String,
     regex_version: String,
     models: Vec<ModelEntry>,
     prompt_injection: Option<BinaryReport>,
@@ -154,18 +163,46 @@ fn load_jsonl<T: for<'de> Deserialize<'de>>(path: &std::path::Path) -> Result<Ve
 }
 
 fn eval_prompt(drishti: &Drishti, examples: &[PromptExample]) -> BinaryReport {
-    let (mut tp, mut fp, mut fn_, mut tn) = (0u32, 0u32, 0u32, 0u32);
-    for ex in examples {
-        let truth_injection = ex.label == "injection";
-        let r = block_on(drishti.check_prompt(&ex.text)).expect("check_prompt");
-        let pred_injection = r.score >= PROMPT_THRESHOLD;
-        match (truth_injection, pred_injection) {
-            (true, true) => tp += 1,
-            (false, true) => fp += 1,
-            (true, false) => fn_ += 1,
-            (false, false) => tn += 1,
+    // Score every example once, then sweep the decision threshold. Drishti
+    // returns a score, so the operating threshold is a policy choice, not a
+    // model property; the sweep shows the precision/recall curve so an operator
+    // can pick the point that fits their tolerance.
+    let scored: Vec<(f32, bool)> = examples
+        .iter()
+        .map(|ex| {
+            let r = block_on(drishti.check_prompt(&ex.text)).expect("check_prompt");
+            (r.score, ex.label == "injection")
+        })
+        .collect();
+
+    let tally = |threshold: f32| -> (u32, u32, u32, u32) {
+        let (mut tp, mut fp, mut fn_, mut tn) = (0u32, 0u32, 0u32, 0u32);
+        for &(score, truth) in &scored {
+            match (truth, score >= threshold) {
+                (true, true) => tp += 1,
+                (false, true) => fp += 1,
+                (true, false) => fn_ += 1,
+                (false, false) => tn += 1,
+            }
         }
+        (tp, fp, fn_, tn)
+    };
+
+    println!("prompt-injection threshold sweep:");
+    let mut best = (PROMPT_THRESHOLD, 0.0_f64);
+    let mut t = 0.05_f32;
+    while t <= 0.951 {
+        let (tp, fp, fn_, _) = tally(t);
+        let (p, r, f1) = prf(tp, fp, fn_);
+        println!("  t={:.2}  P={:.3} R={:.3} F1={:.3}", t, p, r, f1);
+        if f1 > best.1 {
+            best = (t, f1);
+        }
+        t += 0.05;
     }
+    println!("  best F1 {:.3} at t={:.2}", best.1, best.0);
+
+    let (tp, fp, fn_, tn) = tally(PROMPT_THRESHOLD);
     let (precision, recall, f1) = prf(tp, fp, fn_);
     BinaryReport {
         n: examples.len(),
@@ -310,8 +347,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let report = Report {
         generated_unix: SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0),
-        dataset: "seed",
-        note: "Curated seed datasets, not the full public benchmarks. Runtime results remain labelled experimental until a path clears its bar on the full benchmarks and the cross-surface consumer harness.",
+        dataset: args.label.clone(),
+        note: args.note.clone(),
         regex_version: manifest.regex_version.clone(),
         models,
         prompt_injection,
@@ -320,7 +357,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Human-readable summary.
-    println!("\n===== Drishti eval (seed datasets) =====");
+    println!("\n===== Drishti eval ({}) =====", report.dataset);
     if let Some(p) = &report.prompt_injection {
         println!(
             "prompt-injection  P={:.3} R={:.3} F1={:.3}  (bar F1>={:.2}) -> {}",

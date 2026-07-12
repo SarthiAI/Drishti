@@ -79,6 +79,13 @@ pip install drishti
 One abi3 wheel per platform covers Python 3.9 through 3.13, on Linux x86_64,
 Linux ARM64, macOS ARM64 (Apple Silicon), and Windows x86_64.
 
+**Remote client SDKs** (call a running `drishti-server`, no model loaded locally)
+
+```bash
+pip install drishti-sdk                 # Python
+npm install @sarthiai/drishti-sdk       # Node
+```
+
 **Docker**
 
 ```bash
@@ -91,8 +98,8 @@ Linux, so the host operating system does not matter.
 **From source**
 
 ```bash
-git clone https://github.com/sarthiai/drishti
-cd drishti
+git clone https://github.com/SarthAI/Drishti
+cd Drishti
 cargo build --release          # builds the CLI and the server
 pip install maturin && maturin develop --release   # builds the Python wheel
 ```
@@ -199,17 +206,26 @@ not, Drishti downloads it once from the configured source, verifies its SHA-256
 when you provide one, caches it, and then uses it. To bring your own fine-tuned
 model, point the config at a local path.
 
-The set we validated:
+There is no default model and no bundled weights. Instead Drishti ships a
+recommendation matrix: **[MODELS.md](MODELS.md)** lists vetted models per check
+across a footprint range (small to large), with precision and recall measured on
+public benchmarks, honest notes on where each model fits, and starting points by
+industry. Pick a row, point config at it. [config/starter.toml](config/starter.toml)
+is a ready-to-run example, one point on that matrix.
 
-| Check | Model | Precision | Size |
+A working starter set (used in `config/starter.toml`):
+
+| Check | Model | Weights | Size |
 |---|---|---|---|
 | Prompt injection | ProtectAI DeBERTa-v3-base prompt-injection-v2 | fp32 | 704 MB |
 | PII names and orgs | dslim/distilbert-NER | fp32 | 249 MB |
 | Output safety | KoalaAI Text-Moderation | int8 | 136 MB |
 
-> Note: int8 dynamic quantization significantly degrades DeBERTa-v3 accuracy, so
-> the prompt-injection model runs at full precision. For a smaller footprint,
-> choose a different model family rather than quantizing it.
+> Note: model size is a footprint budget, not a quality ranking. What decides
+> accuracy is whether a model was trained on content and labels like yours; see
+> [MODELS.md](MODELS.md). Separately, int8 dynamic quantization significantly
+> degrades DeBERTa-v3 accuracy, so run that prompt-injection model at full
+> precision and switch model family if you need a smaller footprint.
 
 ---
 
@@ -236,30 +252,40 @@ curl -s -X POST http://localhost:8080/v1/check/pii \
   -d '{"input": "card 4111 1111 1111 1111"}'
 ```
 
+Prefer a typed client over raw HTTP? Remote client SDKs for Python
+(`drishti-sdk`) and Node (`@sarthiai/drishti-sdk`) live in [clients/](clients/),
+each with its own README. They call a running `drishti-server` and return typed
+results; they load no model themselves. This is distinct from the in-process
+Python package (`import drishti`) shown above, which runs the models locally.
+
 ---
 
 ## Eval results
 
-These figures come from the eval harness ([eval/](eval/)) run against the
-configured models on curated seed datasets. They establish a working baseline and
-exercise the validated-versus-experimental gate. The full public-benchmark
-numbers (PINT, Presidio, OpenAI Moderation) are produced by the same harness and
-published each release. Reproduce with `cargo run -p drishti-eval -- --config
-<cfg>`; the full report, including the SHA-256 of every model used, is written to
-`eval/results/latest.json`.
+These figures come from the eval harness ([eval/](eval/)) run through the real
+engine on recognized public benchmarks: `deepset/prompt-injections`, the OpenAI
+moderation evaluation, and an `ai4privacy/pii-masking-200k` English sample. They
+measure the specific models configured, not Drishti in the abstract: accuracy is
+a property of the model you pick. The full per-model, per-tier matrix and how to
+choose is in [MODELS.md](MODELS.md). Reproduce with `cargo run -p drishti-eval --
+--config <cfg> --datasets <dir>`; the report, including the SHA-256 of every model
+used, is written under `eval/results/`.
 
-| Check | Precision | Recall | F1 | Verdict |
+Measured highlights (validated means it cleared its bar):
+
+| Check (model) | Precision | Recall | F1 | Verdict |
 |---|---|---|---|---|
-| Prompt injection | 1.00 | 1.00 | 1.00 | validated |
-| Output safety (safe vs unsafe) | 1.00 | 0.833 | 0.909 | validated |
-| PII, regex kinds (11 kinds) | 1.00 | 1.00 | 1.00 | validated |
-| PII, NER Organisation | 1.00 | 1.00 | 1.00 | validated |
-| PII, NER PersonName | 0.75 | 1.00 | 0.857 | experimental |
-| PII, NER Location | 0.667 | 1.00 | 0.80 | experimental |
+| Output safety (KoalaAI Text-Moderation) | 0.879 | 0.960 | 0.918 | validated |
+| PII regex, Email | 0.996 | 0.939 | 0.967 | validated |
+| PII regex, IBAN | 1.000 | 1.000 | 1.000 | validated |
+| PII NER, PersonName (distilbert to bert-large) | up to 0.840 | up to 0.919 | 0.86 to 0.88 | experimental |
+| Prompt injection (ProtectAI DeBERTa) | 0.965 | 0.414 | 0.580 | experimental |
 
-> These are seed-data verdicts. Every result Drishti returns at runtime stays
-> labelled experimental until a path clears its bar on the full public benchmarks
-> and the cross-surface consumer harness.
+> The prompt-injection recall is low because this benchmark is multilingual and
+> out of distribution for that English model; a different model scores very
+> differently. That is the point of [MODELS.md](MODELS.md): public numbers do not
+> predict your traffic. Every runtime result stays labelled experimental until its
+> configured path clears its bar on a real benchmark.
 
 ---
 
@@ -299,10 +325,14 @@ drishti/
     drishti-models/       model resolution, download, caching, hash verification
     drishti-regex/        the PII regex recognizer set
     drishti-server/       the axum HTTP service
-    drishti-ffi-python/   the PyO3 bindings
+    drishti-ffi-python/   the PyO3 bindings (in-process Python package)
     drishti-cli/          the command-line tool
-  eval/                   the eval harness, datasets, and results
+  clients/
+    python/               drishti-sdk: remote HTTP client for Python
+    node/                 @sarthiai/drishti-sdk: remote HTTP client for Node
+  eval/                   the eval harness, datasets, benchmarks, and results
   config/                 example configuration
+  MODELS.md               model recommendation matrix (no default model)
 ```
 
 ---

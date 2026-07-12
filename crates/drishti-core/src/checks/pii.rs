@@ -176,7 +176,8 @@ fn run_ner(
         let (prefix, ty) = parse_bio(label);
 
         let below = best_p < cfg.threshold;
-        if prefix == 'O' || ty.is_empty() || below {
+        let dropped_type = cfg.drop_types.iter().any(|t| t.eq_ignore_ascii_case(ty));
+        if prefix == 'O' || ty.is_empty() || below || dropped_type {
             flush(&mut cur, &mut spans);
             continue;
         }

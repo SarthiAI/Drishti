@@ -1,0 +1,45 @@
+{
+  "name": "@sarthiai/drishti-sdk",
+  "version": "0.1.0",
+  "description": "Thin remote HTTP client (SDK) for a running drishti-server content-safety service",
+  "license": "Elastic-2.0",
+  "author": "Chirotpal Das",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SarthAI/Drishti"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "drishti",
+    "content-safety",
+    "prompt-injection",
+    "pii",
+    "llm-guardrails"
+  ],
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0"
+  }
+}

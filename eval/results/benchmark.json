@@ -1,0 +1,154 @@
+{
+  "generated_unix": 1783835421,
+  "dataset": "full-benchmark",
+  "note": "Full public benchmarks (tuned run): prompt-injection = deepset/prompt-injections; output-safety = OpenAI moderation evaluation; PII = ai4privacy/pii-masking-200k English sample (n=3000), Drishti-detectable kinds only; NER MISC dropped via config.",
+  "regex_version": "regex-2026.06.08",
+  "models": [
+    {
+      "role": "prompt",
+      "model_id": "deberta-v3-prompt-injection-v2-fp32",
+      "sha256": "f0ea7f239f765aedbde7c9e163a7cb38a79c5b8853d3f76db5152172047b228c"
+    },
+    {
+      "role": "pii-ner",
+      "model_id": "distilbert-NER",
+      "sha256": "4440f9fc64cd28ac75d83a38d89716f25947799640cd0e5f1f9f6e57b9c14160"
+    },
+    {
+      "role": "output",
+      "model_id": "koalaai-text-moderation-int8",
+      "sha256": "f453d21e8e4dd42acf90bd8cc67e04ca1490b5987279778df65208d05e45f5c1"
+    }
+  ],
+  "prompt_injection": {
+    "n": 662,
+    "tp": 109,
+    "fp": 4,
+    "fn_": 154,
+    "tn": 395,
+    "precision": 0.9646017699115044,
+    "recall": 0.4144486692015209,
+    "f1": 0.5797872340425532,
+    "bar_f1": 0.92,
+    "seed_verdict": "experimental"
+  },
+  "pii": {
+    "n": 3000,
+    "bar_precision": 0.9,
+    "bar_recall": 0.85,
+    "per_kind": [
+      {
+        "kind": "CreditCard",
+        "tp": 29,
+        "fp": 120,
+        "fn_": 164,
+        "precision": 0.19463087248322147,
+        "recall": 0.15025906735751296,
+        "f1": 0.1695906432748538,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Email",
+        "tp": 247,
+        "fp": 1,
+        "fn_": 16,
+        "precision": 0.9959677419354839,
+        "recall": 0.9391634980988594,
+        "f1": 0.9667318982387476,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Iban",
+        "tp": 130,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "IpAddress",
+        "tp": 434,
+        "fp": 54,
+        "fn_": 0,
+        "precision": 0.889344262295082,
+        "recall": 1.0,
+        "f1": 0.9414316702819957,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Location",
+        "tp": 543,
+        "fp": 175,
+        "fn_": 149,
+        "precision": 0.7562674094707521,
+        "recall": 0.7846820809248555,
+        "f1": 0.7702127659574469,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Organisation",
+        "tp": 117,
+        "fp": 614,
+        "fn_": 54,
+        "precision": 0.1600547195622435,
+        "recall": 0.6842105263157895,
+        "f1": 0.2594235033259424,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "PersonName",
+        "tp": 1046,
+        "fp": 206,
+        "fn_": 146,
+        "precision": 0.8354632587859425,
+        "recall": 0.87751677852349,
+        "f1": 0.855973813420622,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Phone",
+        "tp": 90,
+        "fp": 630,
+        "fn_": 69,
+        "precision": 0.125,
+        "recall": 0.5660377358490566,
+        "f1": 0.20477815699658702,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Ssn",
+        "tp": 50,
+        "fp": 0,
+        "fn_": 67,
+        "precision": 1.0,
+        "recall": 0.42735042735042733,
+        "f1": 0.5988023952095808,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Vat",
+        "tp": 0,
+        "fp": 8,
+        "fn_": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "seed_verdict": "experimental"
+      }
+    ]
+  },
+  "output_safety": {
+    "n": 1680,
+    "tp": 501,
+    "fp": 69,
+    "fn_": 21,
+    "tn": 1089,
+    "precision": 0.8789473684210526,
+    "recall": 0.9597701149425287,
+    "f1": 0.9175824175824177,
+    "bar_f1": 0.85,
+    "seed_verdict": "validated"
+  }
+}

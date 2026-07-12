@@ -133,6 +133,12 @@ pub struct NerConfig {
     /// organisations; enabling this trades a little org recall for precision.
     #[serde(default)]
     pub drop_acronyms: bool,
+    /// NER entity types to drop entirely, case-insensitive, e.g. `["MISC"]`.
+    /// General-purpose NER models emit a miscellaneous class (nationalities,
+    /// events, works) that is not PII; listing it here keeps it out of results.
+    /// Config, not code, so a deployment tunes it without a rebuild.
+    #[serde(default)]
+    pub drop_types: Vec<String>,
 }
 
 /// PII check configuration.

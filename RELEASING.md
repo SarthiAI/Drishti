@@ -1,57 +1,84 @@
 # Releasing Drishti
 
-A release is driven entirely by pushing a `v*` git tag. The tag triggers two
-workflows: `wheels.yml` builds the wheels and sdist and publishes them to PyPI,
-and `docker.yml` builds the multi-arch image and pushes it to Docker Hub.
+One version tag deploys everything, everywhere. Pushing a `v*` tag runs
+`.github/workflows/release.yml`, which builds and publishes, in a single run:
 
-## One-time setup
+| Target | What | Auth |
+|---|---|---|
+| PyPI | `drishti` (embedded PyO3 wheels, one abi3 wheel per platform + sdist) | trusted publishing, environment `pypi` |
+| PyPI | `drishti-sdk` (pure remote client SDK) | trusted publishing, environment `pypi-drishti-sdk` |
+| npm | `@sarthiai/drishti-sdk` (remote client SDK, ESM + CJS + types) | `NPM_TOKEN` secret |
+| crates.io | `drishti-regex`, `drishti-core`, `drishti-models` (in that order) | `CARGO_REGISTRY_TOKEN` secret |
+| Docker Hub | `sarthiai/drishti` (multi-arch server image) | `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` secrets |
 
-These steps are done once, in the project accounts. They are not code.
+Coordinates: GitHub `SarthAI/Drishti`, Docker Hub org `sarthiai` (Docker Hub is
+lowercase). All components share the tag version; the `guard` job fails the run
+if any manifest disagrees with the tag.
 
-### PyPI (trusted publishing)
+## One-time setup (owner, not code)
 
-1. Create the project `drishti` under the `sarthiai` PyPI account (a first manual
-   upload, or a pending publisher).
-2. In the project settings, add a trusted publisher:
-   - Owner: `sarthiai`
-   - Repository: `drishti`
-   - Workflow: `wheels.yml`
-   - Environment: `pypi`
-3. In the GitHub repo, create an environment named `pypi` (Settings, Environments).
-   No token is stored; publishing uses OIDC.
+Do this once before the first `v*` tag.
 
-Note: PyPI requires the (Owner, Repo, Workflow, Environment) tuple to be unique
-per project. If a second package is ever published from this repo, give it a
-different environment name.
+### PyPI trusted publishers (two, distinct environments)
+
+PyPI silently rejects a second pending publisher with the same (Owner, Repo,
+Workflow, Environment) tuple, so the two projects MUST use different environment
+names. Create both projects, then add a trusted publisher to each:
+
+- Project `drishti`: Owner `SarthAI`, Repo `Drishti`, Workflow `release.yml`,
+  Environment `pypi`.
+- Project `drishti-sdk`: Owner `SarthAI`, Repo `Drishti`, Workflow `release.yml`,
+  Environment `pypi-drishti-sdk`.
+
+In the GitHub repo, create two environments named `pypi` and `pypi-drishti-sdk`.
+
+### npm
+
+- Ensure the `@sarthiai` npm org exists and can publish `@sarthiai/drishti-sdk`.
+- Create an npm automation token and store it as the repo secret `NPM_TOKEN`.
+
+### crates.io
+
+- Create a crates.io API token and store it as the repo secret
+  `CARGO_REGISTRY_TOKEN`.
+- The names `drishti-regex`, `drishti-core`, and `drishti-models` must be free on
+  crates.io. The first successful publish claims them.
 
 ### Docker Hub
 
-1. Create the repository `sarthiai/drishti` on Docker Hub.
-2. Create an access token (Account Settings, Security).
-3. In the GitHub repo, add secrets:
-   - `DOCKERHUB_USERNAME`
-   - `DOCKERHUB_TOKEN`
+- Create the `sarthiai/drishti` repository.
+- Store `DOCKERHUB_USERNAME` and a Docker Hub access token as `DOCKERHUB_TOKEN`.
 
 ## Cutting a release
 
-1. Update `CHANGELOG.md`: move items from Unreleased into a new version section.
-2. Bump the version in `Cargo.toml` (`workspace.package.version`) and
-   `pyproject.toml`.
+1. Bump the version to `X.Y.Z` in every manifest so they match:
+   - `Cargo.toml`: `[workspace.package] version`, and the two internal versions
+     under `[workspace.dependencies]` (`drishti-regex`, `drishti-core`).
+   - `pyproject.toml`: the embedded `drishti` wheel.
+   - `clients/python/pyproject.toml`: `drishti-sdk`.
+   - `clients/node/package.json`: `@sarthiai/drishti-sdk`.
+2. Update `CHANGELOG.md`.
 3. Commit.
-4. Tag and push:
+4. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+5. The release workflow runs. `guard` verifies the tag matches all manifests,
+   then every publish job fans out. crates.io publishes in dependency order with
+   a pause between each so the index propagates; if a crates.io step still races,
+   re-run just that job.
 
-   ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
+## Local verification before tagging
 
-5. Watch the `wheels` and `docker` workflows. On success:
-   - wheels and sdist are on PyPI (`pip install drishti`),
-   - the image is on Docker Hub (`docker pull sarthiai/drishti`).
+```
+cargo build --release
+cargo package --no-verify -p drishti-regex -p drishti-core -p drishti-models
+cd clients/python && uv build && ls dist && cd ../..
+cd clients/node   && npm install && npm run typecheck && npm run build && cd ../..
+```
 
 ## Verifying a release
 
-```bash
-pip install drishti && python -c "import drishti; print(drishti.__version__)"
+```
+pip install drishti     && python -c "import drishti; print(drishti.__version__)"
+pip install drishti-sdk && python -c "import drishti_sdk; print(drishti_sdk.__version__)"
+npm view @sarthiai/drishti-sdk version
 docker run --rm sarthiai/drishti --help
 ```

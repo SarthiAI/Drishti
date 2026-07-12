@@ -4,12 +4,14 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Core content-safety checks (prompt injection, PII, output safety) for LLM systems."
 
 # Detection logic and the public types. Carries ort + tokenizers (inference)
 # but NOT tokio, NOT an HTTP client, NOT pyo3. Model bytes arrive through the
 # ModelSource trait, supplied by the caller. See ADR-001 and invariant I4.
 [dependencies]
-drishti-regex = { path = "../drishti-regex" }
+drishti-regex = { workspace = true }
 ort = { workspace = true }
 tokenizers = { workspace = true }
 serde = { workspace = true }

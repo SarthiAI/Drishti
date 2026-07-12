@@ -4,11 +4,13 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Model resolution, download, caching, and hash verification for Drishti."
 
 # Model resolution and caching. Implements the ModelSource trait from core.
 # This is the crate allowed to carry the HTTP client (download) and hashing.
 [dependencies]
-drishti-core = { path = "../drishti-core" }
+drishti-core = { workspace = true }
 reqwest = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }

@@ -1,0 +1,209 @@
+name: release
+
+# One version tag deploys everything, everywhere.
+#
+# Pushing a `v*` tag (for example `v0.1.0`) builds and publishes, in one run:
+#   - PyPI: `drishti` (embedded PyO3 wheels, one abi3 wheel per platform + sdist)
+#   - PyPI: `drishti-sdk` (pure remote client SDK)
+#   - npm:  `@sarthiai/drishti-sdk` (remote client SDK, ESM + CJS + types)
+#   - crates.io: drishti-regex, drishti-core, drishti-models (in dependency order)
+#   - Docker Hub: `sarthiai/drishti` (multi-arch server image)
+#
+# All components share the tag version; the `guard` job fails the run early if
+# any manifest disagrees with the tag. One-time setup (trusted publishers, tokens,
+# secrets) is in RELEASING.md.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  guard:
+    name: version guard
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ws=$(grep -m1 '^version = "' Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          embed=$(grep -m1 '^version = "' pyproject.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          sdk=$(grep -m1 '^version = "' clients/python/pyproject.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          node=$(grep -m1 '"version"' clients/node/package.json | sed -E 's/.*"([0-9][^"]*)".*/\1/')
+          echo "workspace=$ws embedded=$embed sdk=$sdk node=$node"
+          for v in "$embed" "$sdk" "$node"; do
+            if [ "$v" != "$ws" ]; then echo "version mismatch: $v != $ws"; exit 1; fi
+          done
+          echo "version=$ws" >> "$GITHUB_OUTPUT"
+          if [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF#refs/tags/v}"
+            if [ "$tag" != "$ws" ]; then echo "tag v$tag != manifest $ws"; exit 1; fi
+            echo "tag matches manifests at $ws"
+          fi
+
+  drishti-wheels:
+    name: drishti wheel ${{ matrix.platform.target }}
+    needs: guard
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - runner: macos-14
+            target: aarch64-apple-darwin
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --manifest-path crates/drishti-ffi-python/Cargo.toml
+          manylinux: auto
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drishti-wheels-${{ matrix.platform.target }}
+          path: dist
+
+  drishti-sdist:
+    name: drishti sdist
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --manifest-path crates/drishti-ffi-python/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drishti-sdist
+          path: dist
+
+  publish-drishti-pypi:
+    name: publish drishti to PyPI
+    needs: [drishti-wheels, drishti-sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: "drishti-*"
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-drishti-sdk-pypi:
+    name: publish drishti-sdk to PyPI
+    needs: guard
+    runs-on: ubuntu-latest
+    # Its OWN environment so the (Owner, Repo, Workflow, Environment) trusted-
+    # publisher tuple differs from the `drishti` package. See RELEASING.md.
+    environment: pypi-drishti-sdk
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Build wheel and sdist
+        working-directory: clients/python
+        run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: clients/python/dist
+
+  publish-npm-sdk:
+    name: publish @sarthiai/drishti-sdk to npm
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Build and publish
+        working-directory: clients/node
+        run: |
+          npm install
+          npm run typecheck
+          npm run build
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-crates:
+    name: publish libraries to crates.io
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish in dependency order
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          # regex has no internal deps; core depends on regex; models on core.
+          # Sleep between to let the crates.io index propagate the new versions.
+          cargo publish -p drishti-regex
+          sleep 45
+          cargo publish -p drishti-core
+          sleep 45
+          cargo publish -p drishti-models
+
+  docker:
+    name: build and push sarthiai/drishti
+    needs: guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: sarthiai/drishti
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  github-release:
+    name: create GitHub release
+    needs: [publish-drishti-pypi, publish-drishti-sdk-pypi, publish-npm-sdk, publish-crates, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

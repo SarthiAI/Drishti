@@ -16,6 +16,9 @@ classifiers = [
     "Topic :: Security",
 ]
 
+[project.urls]
+Repository = "https://github.com/SarthAI/Drishti"
+
 [tool.maturin]
 # Build the bindings crate out of the workspace, as an abi3 wheel.
 manifest-path = "crates/drishti-ffi-python/Cargo.toml"

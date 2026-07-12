@@ -14,7 +14,7 @@ use ort::session::builder::GraphOptimizationLevel;
 use ort::session::{Session, SessionInputValue};
 use ort::value::Tensor;
 use sha2::{Digest, Sha256};
-use tokenizers::Tokenizer;
+use tokenizers::{Tokenizer, TruncationParams};
 
 use crate::error::DrishtiError;
 
@@ -65,8 +65,20 @@ impl InferenceModel {
 
         let input_names = session.inputs().iter().map(|i| i.name().to_string()).collect();
 
-        let tokenizer = Tokenizer::from_file(tokenizer_path)
+        let mut tokenizer = Tokenizer::from_file(tokenizer_path)
             .map_err(|e| DrishtiError::TokenizationFailed(format!("load tokenizer: {e}")))?;
+
+        // Make the engine's `max_tokens` the authoritative truncation length,
+        // regardless of what the tokenizer file specified. The tokenizer does
+        // special-token-aware truncation (it keeps the model's [CLS]/[SEP]
+        // framing), and when it actually drops tokens the overflow is recorded,
+        // which is how `encode` reports a real `truncated` flag.
+        tokenizer
+            .with_truncation(Some(TruncationParams {
+                max_length: max_tokens,
+                ..Default::default()
+            }))
+            .map_err(|e| DrishtiError::TokenizationFailed(format!("set truncation: {e}")))?;
 
         Ok(Self {
             session: Mutex::new(session),
@@ -84,11 +96,17 @@ impl InferenceModel {
             .encode(text, true)
             .map_err(|e| DrishtiError::TokenizationFailed(e.to_string()))?;
 
+        // The tokenizer truncates to `max_tokens` (set at load); when it drops
+        // tokens the removed remainder is recorded as overflow, so a non-empty
+        // overflow means the input was genuinely truncated.
+        let truncated = !enc.get_overflowing().is_empty();
+
         let ids = enc.get_ids();
         let mask = enc.get_attention_mask();
         let offsets = enc.get_offsets();
 
-        let truncated = ids.len() > self.max_tokens;
+        // Defensive cap: the tokenizer already bounds length, but never feed the
+        // model more than `max_tokens` even if a tokenizer file disables it.
         let take = ids.len().min(self.max_tokens);
 
         Ok(Encoded {
