@@ -1,0 +1,22 @@
+[package]
+name = "drishti-eval"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "drishti-eval"
+path = "src/main.rs"
+
+# The validation gate. Runs labelled eval sets through a real Drishti instance,
+# computes precision/recall/F1, applies the validated-vs-experimental bars, and
+# writes a reproducible JSON report. Not a published crate.
+[dependencies]
+drishti-core = { path = "../crates/drishti-core" }
+drishti-models = { path = "../crates/drishti-models" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+clap = { workspace = true }
+futures = { workspace = true }
+dotenvy = { workspace = true }

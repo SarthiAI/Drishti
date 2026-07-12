@@ -1,0 +1,23 @@
+[package]
+name = "drishti-ffi-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "drishti"
+# cdylib for the importable extension module; rlib so plain `cargo build` in the
+# workspace can also compile-check it.
+crate-type = ["cdylib", "rlib"]
+
+# Python bindings. A thin adapter over drishti-core (invariant I5). The only
+# crate allowed to carry pyo3.
+[dependencies]
+drishti-core = { path = "../drishti-core" }
+drishti-models = { path = "../drishti-models" }
+pyo3 = { workspace = true }
+pythonize = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+dotenvy = { workspace = true }

@@ -1,0 +1,78 @@
+# Drishti starter configuration: ready to run.
+#
+# This points at the three models the project validated, pulled from Hugging Face
+# on first use and verified against the pinned SHA-256. Nothing is hardcoded in
+# the binary; this file is the choice. Every value can be overridden by an
+# environment variable, for example DRISHTI_OUTPUT__THRESHOLD=0.05.
+#
+# First run downloads about 1.1 GB of models into the cache directory (the
+# platform cache dir under drishti/models by default, or set cache_dir here) and
+# reuses them afterwards. To run fully offline or with your own models, switch a
+# source to "local" and point location at a file on disk.
+
+# cache_dir = "/var/cache/drishti"
+# intra_threads = 4
+
+[prompt]
+max_tokens = 512
+positive_label = 1
+
+  [prompt.model]
+  id = "protectai-deberta-v3-base-prompt-injection-v2"
+
+    [prompt.model.model]
+    source = "remote"
+    location = "https://huggingface.co/protectai/deberta-v3-base-prompt-injection-v2/resolve/main/onnx/model.onnx"
+    sha256 = "f0ea7f239f765aedbde7c9e163a7cb38a79c5b8853d3f76db5152172047b228c"
+
+    [prompt.model.tokenizer]
+    source = "remote"
+    location = "https://huggingface.co/protectai/deberta-v3-base-prompt-injection-v2/resolve/main/tokenizer.json"
+
+[pii]
+regex_enabled = true
+
+  [pii.ner]
+  labels = ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC"]
+  max_tokens = 512
+  threshold = 0.5
+  drop_acronyms = true
+
+    [pii.ner.model]
+    id = "dslim-distilbert-NER"
+
+      [pii.ner.model.model]
+      source = "remote"
+      location = "https://huggingface.co/dslim/distilbert-NER/resolve/main/onnx/model.onnx"
+      sha256 = "4440f9fc64cd28ac75d83a38d89716f25947799640cd0e5f1f9f6e57b9c14160"
+
+      [pii.ner.model.tokenizer]
+      source = "remote"
+      location = "https://huggingface.co/dslim/distilbert-NER/resolve/main/tokenizer.json"
+
+  [pii.redaction]
+  default = "mask"
+
+    [pii.redaction.per_kind]
+    CreditCard = "refuse"
+    Email = "hash"
+    PersonName = "tokenise"
+
+[output]
+categories = ["Hate", "HateThreatening", "Harassment", "OK", "Sexual", "SexualMinors", "SelfHarm", "Violence", "ViolenceGraphic"]
+multi_label = false
+safe_category = "OK"
+threshold = 0.1
+max_tokens = 512
+
+  [output.model]
+  id = "koalaai-text-moderation-int8"
+
+    [output.model.model]
+    source = "remote"
+    location = "https://huggingface.co/KoalaAI/Text-Moderation/resolve/main/onnx/model_int8.onnx"
+    sha256 = "f453d21e8e4dd42acf90bd8cc67e04ca1490b5987279778df65208d05e45f5c1"
+
+    [output.model.tokenizer]
+    source = "remote"
+    location = "https://huggingface.co/KoalaAI/Text-Moderation/resolve/main/tokenizer.json"

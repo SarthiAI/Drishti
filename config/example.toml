@@ -1,0 +1,83 @@
+# Example Drishti configuration.
+#
+# This file is an EXAMPLE, not a default. Drishti hardcodes no model. You choose
+# the model for each check here, on the go. If a model is already cached it is
+# used directly; if not, it is downloaded first from the `location`, then used.
+# An optional `sha256` is enforced strictly when present.
+#
+# Enable a check by including its section. Omit a section to disable that check.
+# The model ids, URLs, and labels below are illustrative; substitute whatever
+# model you decide to run.
+
+# Optional. Defaults to the platform cache dir under drishti/models.
+# cache_dir = "/var/lib/drishti/models"
+
+# Optional ONNX intra-op thread count. Omit to let the runtime decide.
+# intra_threads = 4
+
+[prompt]
+max_tokens = 512
+# Index of the "injection" logit for the chosen model (benign=0, injection=1).
+positive_label = 1
+
+  [prompt.model]
+  id = "prompt-injection"
+
+    [prompt.model.model]
+    source = "remote"
+    location = "https://example.com/models/prompt-injection/model.onnx"
+    # sha256 = "..."
+
+    [prompt.model.tokenizer]
+    source = "remote"
+    location = "https://example.com/models/prompt-injection/tokenizer.json"
+    # sha256 = "..."
+
+[pii]
+regex_enabled = true
+
+  # Optional model-backed NER stage. Omit the whole [pii.ner] block to run the
+  # fast regex stage only.
+  [pii.ner]
+  # BIO labels aligned to the model's output order.
+  labels = ["O", "B-PER", "I-PER", "B-LOC", "I-LOC", "B-ORG", "I-ORG"]
+  max_tokens = 512
+  threshold = 0.5
+
+    [pii.ner.model]
+    id = "pii-ner"
+
+      [pii.ner.model.model]
+      source = "local"
+      location = "/var/lib/drishti/models/pii-ner/model.onnx"
+
+      [pii.ner.model.tokenizer]
+      source = "local"
+      location = "/var/lib/drishti/models/pii-ner/tokenizer.json"
+
+  # Redaction policy: a default strategy plus per-kind overrides.
+  # Strategies: mask | hash | tokenise | keep | refuse
+  [pii.redaction]
+  default = "mask"
+
+    [pii.redaction.per_kind]
+    CreditCard = "refuse"
+    Email = "hash"
+    PersonName = "tokenise"
+
+[output]
+# Category names aligned to the model's logit order (multi-label sigmoid head).
+categories = ["Harassment", "Hate", "Violence", "Sexual", "SelfHarm", "DangerousAdvice", "IllegalActivity", "PrivacyViolation"]
+threshold = 0.7
+max_tokens = 512
+
+  [output.model]
+  id = "output-safety"
+
+    [output.model.model]
+    source = "remote"
+    location = "https://example.com/models/output-safety/model.onnx"
+
+    [output.model.tokenizer]
+    source = "remote"
+    location = "https://example.com/models/output-safety/tokenizer.json"

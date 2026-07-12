@@ -1,0 +1,25 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Model cache and downloaded artifacts (never committed)
+/models/
+*.onnx
+*.safetensors
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.egg-info/
+/dist/
+/wheelhouse/
+.venv/
+
+# Local config and secrets
+*.local.toml
+config/m1-local.toml
+.env
+
+# OS
+.DS_Store

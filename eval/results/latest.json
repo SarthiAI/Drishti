@@ -1,0 +1,194 @@
+{
+  "generated_unix": 1780918263,
+  "dataset": "seed",
+  "note": "Seed internal datasets, not the full public benchmarks. Runtime results remain labelled experimental until a path clears its bar on the full benchmarks and the cross-surface consumer harness (master doc section 12).",
+  "regex_version": "regex-2026.06.08",
+  "models": [
+    {
+      "role": "prompt",
+      "model_id": "deberta-v3-prompt-injection-v2-fp32",
+      "sha256": "f0ea7f239f765aedbde7c9e163a7cb38a79c5b8853d3f76db5152172047b228c"
+    },
+    {
+      "role": "pii-ner",
+      "model_id": "distilbert-NER",
+      "sha256": "4440f9fc64cd28ac75d83a38d89716f25947799640cd0e5f1f9f6e57b9c14160"
+    },
+    {
+      "role": "output",
+      "model_id": "koalaai-text-moderation-int8",
+      "sha256": "f453d21e8e4dd42acf90bd8cc67e04ca1490b5987279778df65208d05e45f5c1"
+    }
+  ],
+  "prompt_injection": {
+    "n": 30,
+    "tp": 15,
+    "fp": 0,
+    "fn_": 0,
+    "tn": 15,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "bar_f1": 0.92,
+    "seed_verdict": "validated"
+  },
+  "pii": {
+    "n": 20,
+    "bar_precision": 0.9,
+    "bar_recall": 0.85,
+    "per_kind": [
+      {
+        "kind": "Aadhaar",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "CreditCard",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Email",
+        "tp": 3,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Iban",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "IpAddress",
+        "tp": 2,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Location",
+        "tp": 2,
+        "fp": 1,
+        "fn_": 0,
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "f1": 0.8,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Nino",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Organisation",
+        "tp": 2,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Pan",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "PersonName",
+        "tp": 3,
+        "fp": 1,
+        "fn_": 0,
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571428571428571,
+        "seed_verdict": "experimental"
+      },
+      {
+        "kind": "Phone",
+        "tp": 2,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Ssn",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Upi",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      },
+      {
+        "kind": "Vat",
+        "tp": 1,
+        "fp": 0,
+        "fn_": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "seed_verdict": "validated"
+      }
+    ]
+  },
+  "output_safety": {
+    "n": 24,
+    "tp": 10,
+    "fp": 0,
+    "fn_": 2,
+    "tn": 12,
+    "precision": 1.0,
+    "recall": 0.8333333333333334,
+    "f1": 0.9090909090909091,
+    "bar_f1": 0.85,
+    "seed_verdict": "validated"
+  }
+}

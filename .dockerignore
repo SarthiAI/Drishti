@@ -1,0 +1,11 @@
+# Keep the build context small and reproducible.
+target/
+models/
+.git/
+.github/
+.venv/
+dist/
+wheelhouse/
+*.snapshot-*
+**/*.rs.bk
+.DS_Store

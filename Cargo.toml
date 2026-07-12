@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/drishti-core",
+    "crates/drishti-models",
+    "crates/drishti-regex",
+    "crates/drishti-cli",
+    "crates/drishti-server",
+    "crates/drishti-ffi-python",
+    "eval",
+]
+
+# The Python extension module is built by maturin (which sets the macOS
+# dynamic-lookup link args for the Python C-API). A plain `cargo build` would try
+# to link it like a normal cdylib and fail on undefined `_Py*` symbols, so it is
+# excluded from the default set. It stays a member so maturin and tooling see it.
+default-members = [
+    "crates/drishti-core",
+    "crates/drishti-models",
+    "crates/drishti-regex",
+    "crates/drishti-cli",
+    "crates/drishti-server",
+    "eval",
+]
+
+# pyo3 0.28's `#[cold]` argument_extraction_error is referenced across codegen
+# units; on Rust 1.94 the default multi-CGU split leaves it unresolved when
+# linking the extension-module cdylib. Compiling pyo3 as a single codegen unit
+# keeps the reference and the definition together.
+[profile.release.package.pyo3]
+codegen-units = 1
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Elastic-2.0"
+repository = "https://github.com/sarthiai/drishti"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+sha2 = "0.10"
+hex = "0.4"
+regex = "1"
+
+# Heavy, non-pure deps live in the crates that are allowed to carry them.
+ort = "=2.0.0-rc.12"
+tokenizers = "0.23"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+futures = "0.3"
+clap = { version = "4", features = ["derive"] }
+toml = "0.8"
+# Config loading: TOML base, overlaid by environment variables / .env files.
+figment = { version = "0.10", default-features = false, features = ["toml", "env"] }
+dotenvy = "0.15"
+
+# Server only.
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "signal"] }
+tower-http = { version = "0.6", features = ["trace"] }
+
+# Python FFI only. abi3-py39 yields one forward-compatible wheel per platform
+# that works on Python 3.9 through 3.13+.
+pyo3 = { version = "0.28", features = ["extension-module", "abi3-py39"] }
+pythonize = "0.28"

@@ -1,0 +1,10 @@
+[package]
+name = "drishti-regex"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# Pure. The regex PII recognizer set. No I/O, no model, no dependency on core.
+[dependencies]
+regex = { workspace = true }

@@ -1,0 +1,20 @@
+{"text": "Contact me at jane.doe@example.com for details.", "kinds": ["Email"]}
+{"text": "My card number is 4111 1111 1111 1111, please charge it.", "kinds": ["CreditCard"]}
+{"text": "Call John Smith on +1 415 555 2671 tomorrow.", "kinds": ["PersonName", "Phone"]}
+{"text": "The server at 192.168.0.42 is unreachable.", "kinds": ["IpAddress"]}
+{"text": "His US SSN is 536-90-4399 on the form.", "kinds": ["Ssn"]}
+{"text": "PAN card ABCDE1234F was submitted for KYC.", "kinds": ["Pan"]}
+{"text": "Aadhaar 2234 5678 9012 was verified at the centre.", "kinds": ["Aadhaar"]}
+{"text": "Transfer to IBAN GB82WEST12345698765432 today.", "kinds": ["Iban"]}
+{"text": "Pay me at rohan@oksbi using any UPI app.", "kinds": ["Upi"]}
+{"text": "Rahul Sharma joined Infosys in Bengaluru last year.", "kinds": ["PersonName", "Organisation", "Location"]}
+{"text": "The weather in the valley is lovely this season.", "kinds": []}
+{"text": "Email priya@acme.co and cc the manager.", "kinds": ["Email"]}
+{"text": "Our company VAT number is DE123456789 for invoices.", "kinds": ["Vat"]}
+{"text": "Her UK NINO is AB123456C per the records.", "kinds": ["Nino"]}
+{"text": "Acme Corporation reported strong earnings this quarter.", "kinds": ["Organisation"]}
+{"text": "I moved to Berlin and love it here.", "kinds": ["Location"]}
+{"text": "Reach support@company.io or call 020 7946 0958.", "kinds": ["Email", "Phone"]}
+{"text": "Thank you for your help yesterday.", "kinds": []}
+{"text": "Doctor Meera Nair will see you now.", "kinds": ["PersonName"]}
+{"text": "Our internal IP range starts at 10.0.0.1 by default.", "kinds": ["IpAddress"]}

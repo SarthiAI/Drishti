@@ -1,0 +1,24 @@
+[package]
+name = "drishti-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "drishti-server"
+path = "src/main.rs"
+
+# The HTTP service. A thin adapter over drishti-core (invariant I5). This is the
+# crate allowed to carry the async runtime and the web framework.
+[dependencies]
+drishti-core = { path = "../drishti-core" }
+drishti-models = { path = "../drishti-models" }
+axum = { workspace = true }
+tokio = { workspace = true }
+tower-http = { workspace = true }
+futures = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+dotenvy = { workspace = true }

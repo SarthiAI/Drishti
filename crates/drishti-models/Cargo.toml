@@ -1,0 +1,14 @@
+[package]
+name = "drishti-models"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# Model resolution and caching. Implements the ModelSource trait from core.
+# This is the crate allowed to carry the HTTP client (download) and hashing.
+[dependencies]
+drishti-core = { path = "../drishti-core" }
+reqwest = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
