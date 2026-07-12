@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sarthiai-drishti-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "Thin remote HTTP client (SDK) for a running drishti-server content-safety service. Imported as `drishti_sdk`."
 readme = "README.md"
 requires-python = ">=3.9"

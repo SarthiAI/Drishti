@@ -116,8 +116,53 @@ fn to_py<'py, T: Serialize>(py: Python<'py>, value: &T) -> PyResult<Bound<'py, P
     pythonize::pythonize(py, value).map_err(to_pyerr)
 }
 
+/// Point ort at the ONNX Runtime shared library shipped by the `onnxruntime`
+/// Python package, unless the caller already set `ORT_DYLIB_PATH`. The extension
+/// is built with ort's `load-dynamic` (it links no ONNX Runtime), so the wheel
+/// stays pure and portable; onnxruntime is provided at runtime by the pip
+/// package, which is broadly compatible (manylinux). This runs at import, before
+/// any model loads, so ort finds the library on the first check.
+fn ensure_ort_dylib(py: Python<'_>) {
+    if std::env::var_os("ORT_DYLIB_PATH").is_some() {
+        return;
+    }
+    let Ok(ort) = py.import("onnxruntime") else {
+        return;
+    };
+    let Ok(file) = ort.getattr("__file__").and_then(|f| f.extract::<String>()) else {
+        return;
+    };
+    let Some(capi) = std::path::Path::new(&file).parent().map(|d| d.join("capi")) else {
+        return;
+    };
+    let mut best: Option<std::path::PathBuf> = None;
+    if let Ok(entries) = std::fs::read_dir(&capi) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let is_lib = name.starts_with("libonnxruntime")
+                || (name.starts_with("onnxruntime") && name.ends_with(".dll"));
+            if is_lib && !name.contains("providers") {
+                let path = entry.path();
+                // Prefer the longest filename: the real versioned library over a
+                // shorter symlink or the providers shim.
+                let better = best
+                    .as_ref()
+                    .and_then(|b| b.file_name().map(|n| n.len()))
+                    .map_or(true, |cur| name.len() >= cur);
+                if better {
+                    best = Some(path);
+                }
+            }
+        }
+    }
+    if let Some(path) = best {
+        std::env::set_var("ORT_DYLIB_PATH", path);
+    }
+}
+
 #[pymodule]
 fn drishti(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    ensure_ort_dylib(m.py());
     m.add_class::<PyDrishti>()?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

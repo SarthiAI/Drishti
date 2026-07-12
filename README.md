@@ -104,6 +104,17 @@ cargo build --release          # builds the CLI and the server
 pip install maturin && maturin develop --release   # builds the Python wheel
 ```
 
+**ONNX Runtime at runtime.** Drishti links ONNX Runtime dynamically (ort's
+`load-dynamic`), so the build is pure Rust and the artifacts stay small and
+portable. The library is provided at runtime:
+
+- The `sarthiai-drishti` wheel and the Docker image pull it in automatically (a
+  dependency of the wheel; downloaded into the image), so `pip install` and
+  `docker run` just work.
+- Running the CLI or server from a source build: install ONNX Runtime (for
+  example `pip install "onnxruntime>=1.24"`) and point Drishti at its shared
+  library with `ORT_DYLIB_PATH=/path/to/libonnxruntime.so` (or `.dylib` / `.dll`).
+
 ---
 
 ## Quick start
@@ -353,5 +364,11 @@ Drishti (sight) watches, Lipi (script) writes the rules. Drishti is useful on it
 own and integrates with the rest through Niyam's shared contracts in later
 versions. The decision layer (what to block or allow) is Kavach, with rules
 authored in Lipi. Drishti only ever hands over scores and flags.
-```
 
+---
+
+<div align="center">
+
+Designed, developed, and maintained by <a href="https://www.linkedin.com/in/chirotpal/" target="_blank">Chirotpal</a>
+
+</div>

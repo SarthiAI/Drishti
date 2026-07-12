@@ -31,7 +31,7 @@ default-members = [
 codegen-units = 1
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.85"
 license = "Elastic-2.0"
@@ -42,9 +42,9 @@ repository = "https://github.com/SarthiAI/Drishti"
 # `drishti-*` brand is kept for the in-code names via the dep key and [lib] name,
 # so Rust source keeps using `drishti_core` etc.). Keep these versions in step
 # with workspace.package.version above.
-drishti-regex = { package = "sarthiai-drishti-regex", path = "crates/drishti-regex", version = "0.1.0" }
-drishti-core = { package = "sarthiai-drishti-core", path = "crates/drishti-core", version = "0.1.0" }
-drishti-models = { package = "sarthiai-drishti-models", path = "crates/drishti-models", version = "0.1.0" }
+drishti-regex = { package = "sarthiai-drishti-regex", path = "crates/drishti-regex", version = "0.1.1" }
+drishti-core = { package = "sarthiai-drishti-core", path = "crates/drishti-core", version = "0.1.1" }
+drishti-models = { package = "sarthiai-drishti-models", path = "crates/drishti-models", version = "0.1.1" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -53,7 +53,13 @@ hex = "0.4"
 regex = "1"
 
 # Heavy, non-pure deps live in the crates that are allowed to carry them.
-ort = "=2.0.0-rc.12"
+# load-dynamic: do NOT link or download onnxruntime at build. The Rust then
+# builds pure (manylinux/Windows/any-glibc, like a no-native-dep crate), and ort
+# dlopens libonnxruntime at runtime from ORT_DYLIB_PATH. onnxruntime itself is
+# provided by the official `onnxruntime` distribution (pip package / Docker),
+# which is already built for broad compatibility. Avoids the glibc-2.38 wall,
+# the OpenSSL pull (tls-native), and the Windows CRT clash.
+ort = { version = "=2.0.0-rc.12", default-features = false, features = ["load-dynamic", "ndarray", "tracing", "api-24"] }
 tokenizers = "0.23"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
 futures = "0.3"
