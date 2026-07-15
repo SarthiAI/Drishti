@@ -17,3 +17,8 @@ serde_json = { workspace = true }
 clap = { version = "4", features = ["derive"] }
 futures = "0.3"
 dotenvy = { workspace = true }
+
+[features]
+# Run the CLI's checks on a GPU (config still selects the provider).
+cuda = ["drishti-core/cuda"]
+tensorrt = ["drishti-core/tensorrt"]

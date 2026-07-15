@@ -22,6 +22,27 @@ pub enum SourceKind {
     Remote,
 }
 
+/// Which ONNX Runtime execution provider the inference sessions use. `Cpu` (the
+/// default) is byte-for-byte today's behaviour. The GPU providers are opt-in and
+/// only take effect in a build compiled with the matching cargo feature (`cuda`
+/// / `tensorrt`); on a CPU-only build an explicit GPU choice fails closed rather
+/// than silently running on the CPU. See ADR-012.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ExecutionProvider {
+    /// CPU. The default and the only provider in a default build.
+    #[default]
+    Cpu,
+    /// NVIDIA CUDA. Requires a build with `--features cuda` and a CUDA-enabled
+    /// `libonnxruntime` at `ORT_DYLIB_PATH`.
+    Cuda,
+    /// NVIDIA TensorRT. Requires a build with `--features tensorrt`.
+    Tensorrt,
+    /// Try a GPU provider, fall back to CPU if it is unavailable, and log which
+    /// was chosen. Never fails on account of a missing GPU.
+    Auto,
+}
+
 /// One downloadable or local file: a model graph, or a tokenizer. The unit the
 /// `ModelSource` resolves to a concrete path on disk.
 #[derive(Clone, Debug, Deserialize)]
@@ -191,6 +212,14 @@ pub struct DrishtiConfig {
     /// Threads for ONNX intra-op parallelism. None lets the runtime decide.
     #[serde(default)]
     pub intra_threads: Option<usize>,
+    /// ONNX Runtime execution provider. Defaults to CPU (today's behaviour).
+    /// Additive and optional: absent means CPU. See [`ExecutionProvider`].
+    #[serde(default)]
+    pub execution_provider: ExecutionProvider,
+    /// GPU device ordinal used when a GPU execution provider is selected. Ignored
+    /// on CPU. Defaults to 0.
+    #[serde(default)]
+    pub gpu_device_id: i32,
     #[serde(default)]
     pub prompt: Option<PromptConfig>,
     #[serde(default)]

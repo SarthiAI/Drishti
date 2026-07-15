@@ -8,7 +8,7 @@ One version tag deploys everything, everywhere. Pushing a `v*` tag runs
 | PyPI | `sarthiai-drishti` (embedded PyO3 wheels + sdist; imported as `drishti`) | trusted publishing, environment `pypi` |
 | PyPI | `sarthiai-drishti-sdk` (pure remote client SDK; imported as `drishti_sdk`) | trusted publishing, environment `pypi-drishti-sdk` |
 | npm | `sarthiai-drishti-sdk` (remote client SDK, ESM + CJS + types) | `NPM_TOKEN` secret |
-| crates.io | `sarthiai-drishti-regex`, `sarthiai-drishti-core`, `sarthiai-drishti-models` (in that order) | `CARGO_REGISTRY_TOKEN` secret |
+| crates.io | `sarthiai-drishti-regex`, `sarthiai-drishti-core`, `sarthiai-drishti-models`, `sarthiai-drishti-client` (in that order) | `CARGO_REGISTRY_TOKEN` secret |
 | Docker Hub | `sarthiai/drishti` (multi-arch server image) | `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` secrets |
 
 Coordinates: GitHub `SarthiAI/Drishti`, Docker Hub org `sarthiai` (Docker Hub is
@@ -47,8 +47,9 @@ In the GitHub repo, create two environments named `pypi` and `pypi-drishti-sdk`.
 
 - Create a crates.io API token and store it as the repo secret
   `CARGO_REGISTRY_TOKEN`.
-- The names `sarthiai-drishti-regex`, `sarthiai-drishti-core`, and
-  `sarthiai-drishti-models` must be free on crates.io. The first successful
+- The names `sarthiai-drishti-regex`, `sarthiai-drishti-core`,
+  `sarthiai-drishti-models`, and `sarthiai-drishti-client` must be free on
+  crates.io. The first successful
   publish claims them. (The crates are imported in Rust as `drishti_regex`,
   `drishti_core`, `drishti_models`; only the published names carry the prefix.)
 
@@ -77,7 +78,7 @@ In the GitHub repo, create two environments named `pypi` and `pypi-drishti-sdk`.
 
 ```
 cargo build --release
-cargo package --no-verify -p sarthiai-drishti-regex -p sarthiai-drishti-core -p sarthiai-drishti-models
+cargo package --no-verify -p sarthiai-drishti-regex -p sarthiai-drishti-core -p sarthiai-drishti-models -p sarthiai-drishti-client
 cd clients/python && uv build && ls dist && cd ../..
 cd clients/node   && npm install && npm run typecheck && npm run build && cd ../..
 ```

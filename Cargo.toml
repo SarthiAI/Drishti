@@ -4,6 +4,7 @@ members = [
     "crates/drishti-core",
     "crates/drishti-models",
     "crates/drishti-regex",
+    "crates/drishti-client",
     "crates/drishti-cli",
     "crates/drishti-server",
     "crates/drishti-ffi-python",
@@ -18,6 +19,7 @@ default-members = [
     "crates/drishti-core",
     "crates/drishti-models",
     "crates/drishti-regex",
+    "crates/drishti-client",
     "crates/drishti-cli",
     "crates/drishti-server",
     "eval",
@@ -31,7 +33,7 @@ default-members = [
 codegen-units = 1
 
 [workspace.package]
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 rust-version = "1.85"
 license = "Elastic-2.0"
@@ -42,9 +44,10 @@ repository = "https://github.com/SarthiAI/Drishti"
 # `drishti-*` brand is kept for the in-code names via the dep key and [lib] name,
 # so Rust source keeps using `drishti_core` etc.). Keep these versions in step
 # with workspace.package.version above.
-drishti-regex = { package = "sarthiai-drishti-regex", path = "crates/drishti-regex", version = "0.1.1" }
-drishti-core = { package = "sarthiai-drishti-core", path = "crates/drishti-core", version = "0.1.1" }
-drishti-models = { package = "sarthiai-drishti-models", path = "crates/drishti-models", version = "0.1.1" }
+drishti-regex = { package = "sarthiai-drishti-regex", path = "crates/drishti-regex", version = "0.1.2" }
+drishti-core = { package = "sarthiai-drishti-core", path = "crates/drishti-core", version = "0.1.2" }
+drishti-models = { package = "sarthiai-drishti-models", path = "crates/drishti-models", version = "0.1.2" }
+drishti-client = { package = "sarthiai-drishti-client", path = "crates/drishti-client", version = "0.1.2" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -69,10 +72,17 @@ toml = "0.8"
 figment = { version = "0.10", default-features = false, features = ["toml", "env"] }
 dotenvy = "0.15"
 
+# Backend-agnostic safety trait (core) and its remote impl (client).
+async-trait = "0.1"
+
 # Server only.
 axum = "0.8"
-tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "signal"] }
-tower-http = { version = "0.6", features = ["trace"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "signal", "sync", "time"] }
+tower-http = { version = "0.6", features = ["trace", "limit", "timeout"] }
+# Optional TLS termination in the server. rustls with the ring provider, kept
+# minimal; the crypto provider is installed explicitly at startup when TLS is on.
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 
 # Python FFI only. abi3-py39 yields one forward-compatible wheel per platform
 # that works on Python 3.9 through 3.13+.

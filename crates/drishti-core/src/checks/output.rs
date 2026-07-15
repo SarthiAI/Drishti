@@ -11,10 +11,16 @@ use crate::engine::{sigmoid, softmax, InferenceModel};
 use crate::error::DrishtiError;
 use crate::types::{OutputCheck, SafetyVerdict, Validation};
 
-pub fn run(model: &InferenceModel, cfg: &OutputConfig, output: &str) -> Result<OutputCheck, DrishtiError> {
-    let start = Instant::now();
-    let (logits, _truncated) = model.classify_sequence(output)?;
-
+/// Turn a raw logit vector into an [`OutputCheck`]. The single place the
+/// per-category scores and the verdict are derived, shared by the single-input
+/// and batched paths so a batched verdict equals a single one.
+pub fn interpret(
+    cfg: &OutputConfig,
+    logits: &[f32],
+    text: &str,
+    model_id: &str,
+    latency_ms: u32,
+) -> Result<OutputCheck, DrishtiError> {
     if logits.len() != cfg.categories.len() || cfg.categories.is_empty() {
         return Err(DrishtiError::InvalidConfiguration(format!(
             "output model produced {} logits but the config lists {} categories",
@@ -28,7 +34,7 @@ pub fn run(model: &InferenceModel, cfg: &OutputConfig, output: &str) -> Result<O
     let scores: Vec<f32> = if cfg.multi_label {
         logits.iter().map(|&l| sigmoid(l)).collect()
     } else {
-        softmax(&logits)
+        softmax(logits)
     };
 
     let mut categories = HashMap::new();
@@ -62,11 +68,39 @@ pub fn run(model: &InferenceModel, cfg: &OutputConfig, output: &str) -> Result<O
     Ok(OutputCheck {
         categories,
         overall,
-        language: detect_language(output),
-        latency_ms: start.elapsed().as_millis() as u32,
-        model_id: model.model_id.clone(),
+        language: detect_language(text),
+        latency_ms,
+        model_id: model_id.to_string(),
         validation: Validation::Experimental,
     })
+}
+
+pub fn run(model: &InferenceModel, cfg: &OutputConfig, output: &str) -> Result<OutputCheck, DrishtiError> {
+    let start = Instant::now();
+    let (logits, _truncated) = model.classify_sequence(output)?;
+    interpret(
+        cfg,
+        &logits,
+        output,
+        &model.model_id,
+        start.elapsed().as_millis() as u32,
+    )
+}
+
+/// Batched output-safety check. One forward pass over all outputs; each result
+/// is identical to running that output alone.
+pub fn run_batch(
+    model: &InferenceModel,
+    cfg: &OutputConfig,
+    outputs: &[&str],
+) -> Result<Vec<OutputCheck>, DrishtiError> {
+    let start = Instant::now();
+    let rows = model.classify_sequence_batch(outputs)?;
+    let latency_ms = start.elapsed().as_millis() as u32;
+    rows.iter()
+        .zip(outputs.iter())
+        .map(|((logits, _truncated), text)| interpret(cfg, logits, text, &model.model_id, latency_ms))
+        .collect()
 }
 
 /// Lightweight language heuristic: if the letters are overwhelmingly ASCII we

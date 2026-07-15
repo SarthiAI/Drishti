@@ -3,12 +3,12 @@
 
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Whether the path that produced a result has cleared its eval-harness bar.
 /// Carried in every result so a caller never mistakes an unvalidated path for a
 /// contractual one. See invariant I7.
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Validation {
     Validated,
@@ -17,7 +17,7 @@ pub enum Validation {
 
 /// Prompt-injection sub-class. v0.1 emits `Benign` or `InstructionOverride`; the
 /// finer classes are reserved and experimental until labelled data validates them.
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PromptClass {
     Benign,
     InstructionOverride,
@@ -26,7 +26,7 @@ pub enum PromptClass {
     ToolMisuse,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PromptCheck {
     pub score: f32,
     pub class: PromptClass,
@@ -38,7 +38,7 @@ pub struct PromptCheck {
 }
 
 /// Where a PII span came from.
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum PiiSource {
     Regex,
@@ -47,7 +47,7 @@ pub enum PiiSource {
 
 /// PII kind. Not exhaustive: operators add custom recognizers, and anything the
 /// recognizer set does not name maps to `Other`.
-#[derive(Clone, Debug, Serialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum PiiKind {
     Email,
     Phone,
@@ -109,7 +109,7 @@ impl PiiKind {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PiiSpan {
     /// Byte offset into the input, inclusive start.
     pub start: usize,
@@ -120,7 +120,7 @@ pub struct PiiSpan {
     pub source: PiiSource,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PiiCheck {
     pub spans: Vec<PiiSpan>,
     pub redacted: String,
@@ -134,7 +134,7 @@ pub struct PiiCheck {
 }
 
 /// Aggregate pass/fail for output safety, against the configured threshold.
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum SafetyVerdict {
     Pass,
@@ -142,7 +142,7 @@ pub enum SafetyVerdict {
     Uncertain,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputCheck {
     pub categories: HashMap<String, f32>,
     pub overall: SafetyVerdict,
@@ -154,7 +154,7 @@ pub struct OutputCheck {
 }
 
 /// Result of `check_all`. Each field is present only if that check ran.
-#[derive(Clone, Debug, Serialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct FullCheck {
     pub prompt: Option<PromptCheck>,
     pub pii: Option<PiiCheck>,
@@ -163,14 +163,14 @@ pub struct FullCheck {
 
 /// One entry per loaded model, for audit. Reports exactly which artifact
 /// produced results, regardless of how it was sourced. See invariant I6.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ModelManifestEntry {
     pub role: String,
     pub model_id: String,
     pub sha256: String,
 }
 
-#[derive(Clone, Debug, Serialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct ModelManifest {
     pub regex_version: String,
     pub models: Vec<ModelManifestEntry>,

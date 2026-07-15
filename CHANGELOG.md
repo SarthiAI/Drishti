@@ -8,6 +8,26 @@ follow semantic versioning once it reaches 1.0.
 
 ### Added
 
+- GPU execution and remote serving, all additive and opt-in; the embedded,
+  in-process, CPU path stays the default and is unchanged (see [SERVING.md](SERVING.md)):
+  - An `execution_provider` config option (`cpu` default, `cuda`, `tensorrt`,
+    `auto`) plus `gpu_device_id`, so the ONNX classifiers can run on a GPU.
+    Enabled in a build made with `--features cuda` or `--features tensorrt`;
+    `auto` falls back to the CPU, and an explicit GPU choice on a CPU-only build
+    fails closed with a clear error.
+  - A backend-agnostic `SafetyEngine` trait in `drishti-core`, implemented by
+    both the embedded engine and a new remote client, so a host holds one handle
+    regardless of where inference runs. A distinct `SafetyError` separates a
+    verdict-time fault from an unreachable backend so hosts can fail closed.
+  - A new `sarthiai-drishti-client` crate: a Rust `RemoteDrishti` that speaks to
+    a `drishti-server` over authenticated, optionally TLS, JSON.
+  - Server hardening (opt-in via a `[server]` config table): optional TLS, an
+    optional pinned model-set id with HTTP 409 on mismatch, a request-body limit
+    (413), a per-request timeout (504), a concurrency cap that sheds with 503,
+    `/batch` endpoints, an honest `/readyz` (false while models load), a
+    `/v1/version` endpoint, and a debug-only content-logging flag (off, warned).
+    Request and response content is never logged by default.
+
 - Three content-safety checks: prompt-injection detection, PII detection and
   redaction, and output-safety classification.
 - Three surfaces over one core: the `drishti` CLI, the `drishti-server` HTTP

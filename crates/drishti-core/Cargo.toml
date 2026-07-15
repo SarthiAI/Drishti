@@ -23,3 +23,12 @@ thiserror = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 figment = { workspace = true }
+async-trait = { workspace = true }
+
+[features]
+# GPU execution providers, opt-in. The default build stays CPU-only and pure
+# (still load-dynamic, no static CUDA link), so wheels/crates/Docker keep their
+# broad portability. A GPU deployment builds with one of these plus a
+# CUDA-enabled libonnxruntime at ORT_DYLIB_PATH. See ADR-012.
+cuda = ["ort/cuda"]
+tensorrt = ["ort/tensorrt"]

@@ -10,13 +10,34 @@ use std::io::Read;
 use std::path::Path;
 use std::sync::Mutex;
 
-use ort::session::builder::GraphOptimizationLevel;
+use ort::session::builder::{GraphOptimizationLevel, SessionBuilder};
 use ort::session::{Session, SessionInputValue};
 use ort::value::Tensor;
 use sha2::{Digest, Sha256};
 use tokenizers::{Tokenizer, TruncationParams};
 
+use crate::config::ExecutionProvider;
 use crate::error::DrishtiError;
+
+/// How a session is built: execution provider, GPU device, and intra-op threads.
+/// Assembled from [`crate::config::DrishtiConfig`] and passed to every model
+/// load, so all of a Drishti instance's sessions share one runtime setup.
+#[derive(Clone, Copy, Debug)]
+pub struct SessionOptions {
+    pub provider: ExecutionProvider,
+    pub device_id: i32,
+    pub intra_threads: Option<usize>,
+}
+
+impl Default for SessionOptions {
+    fn default() -> Self {
+        Self {
+            provider: ExecutionProvider::Cpu,
+            device_id: 0,
+            intra_threads: None,
+        }
+    }
+}
 
 /// A loaded model: ONNX session, tokenizer, and audit identity.
 pub struct InferenceModel {
@@ -45,7 +66,7 @@ impl InferenceModel {
         tokenizer_path: &Path,
         model_id: String,
         max_tokens: usize,
-        intra_threads: Option<usize>,
+        opts: &SessionOptions,
     ) -> Result<Self, DrishtiError> {
         let sha256 = sha256_file(model_path)?;
 
@@ -54,7 +75,11 @@ impl InferenceModel {
         builder = builder
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(|e| DrishtiError::InferenceFailed(format!("optimization level: {e}")))?;
-        if let Some(threads) = intra_threads {
+        // Register the requested execution provider (CPU by default). This is the
+        // one place the GPU option touches session setup; on a CPU build or a CPU
+        // choice it is a no-op and the session is byte-for-byte today's.
+        builder = apply_execution_provider(builder, opts)?;
+        if let Some(threads) = opts.intra_threads {
             builder = builder
                 .with_intra_threads(threads)
                 .map_err(|e| DrishtiError::InferenceFailed(format!("intra threads: {e}")))?;
@@ -190,6 +215,211 @@ impl InferenceModel {
         let rows = flat.chunks(num_labels).map(|r| r.to_vec()).collect();
         Ok((rows, offsets, truncated))
     }
+
+    /// Batched sequence classification. Encodes each input, pads every sequence
+    /// to the batch's longest, runs one forward pass, and returns one
+    /// `(logits, truncated)` pair per input, in input order. Padding positions
+    /// carry attention mask 0, so a padded row's logits equal the row's own
+    /// single-input logits: a batched verdict is identical to a single one. This
+    /// is what makes server-side batching safe (invariant: batching never
+    /// changes a decision).
+    pub fn classify_sequence_batch(
+        &self,
+        texts: &[&str],
+    ) -> Result<Vec<(Vec<f32>, bool)>, DrishtiError> {
+        if texts.is_empty() {
+            return Ok(Vec::new());
+        }
+        let encs: Vec<Encoded> = texts
+            .iter()
+            .map(|t| self.encode(t))
+            .collect::<Result<_, _>>()?;
+        let maxlen = encs.iter().map(|e| e.ids.len()).max().unwrap_or(0);
+        if maxlen == 0 {
+            return Err(DrishtiError::InferenceFailed(
+                "batch produced an empty token encoding".into(),
+            ));
+        }
+        let feeds = self.feeds_batch(&encs, maxlen)?;
+        let flat = self.run_raw(feeds)?;
+        let n = texts.len();
+        if flat.len() % n != 0 {
+            return Err(DrishtiError::InferenceFailed(format!(
+                "batch logits length {} not divisible by batch size {n}",
+                flat.len()
+            )));
+        }
+        let num_labels = flat.len() / n;
+        let out = (0..n)
+            .map(|i| {
+                (
+                    flat[i * num_labels..(i + 1) * num_labels].to_vec(),
+                    encs[i].truncated,
+                )
+            })
+            .collect();
+        Ok(out)
+    }
+
+    /// Build the padded `[batch, maxlen]` feeds for a batch of encodings. Rows
+    /// shorter than `maxlen` are right-padded with token id 0 and attention mask
+    /// 0 so the model ignores them.
+    fn feeds_batch(
+        &self,
+        encs: &[Encoded],
+        maxlen: usize,
+    ) -> Result<Vec<(String, SessionInputValue<'static>)>, DrishtiError> {
+        let n = encs.len();
+        let shape = vec![n as i64, maxlen as i64];
+        let mut ids = Vec::with_capacity(n * maxlen);
+        let mut mask = Vec::with_capacity(n * maxlen);
+        let mut typ = Vec::with_capacity(n * maxlen);
+        for e in encs {
+            for j in 0..maxlen {
+                if j < e.ids.len() {
+                    ids.push(e.ids[j]);
+                    mask.push(e.mask[j]);
+                } else {
+                    ids.push(0);
+                    mask.push(0);
+                }
+                typ.push(0_i64);
+            }
+        }
+        let mut feeds: Vec<(String, SessionInputValue<'static>)> = Vec::new();
+        for name in &self.input_names {
+            let tensor = match name.as_str() {
+                "input_ids" => Tensor::from_array((shape.clone(), ids.clone())),
+                "attention_mask" => Tensor::from_array((shape.clone(), mask.clone())),
+                "token_type_ids" => Tensor::from_array((shape.clone(), typ.clone())),
+                _ => continue,
+            }
+            .map_err(|e| DrishtiError::InferenceFailed(format!("batch tensor {name}: {e}")))?;
+            feeds.push((name.clone(), tensor.into()));
+        }
+        if feeds.is_empty() {
+            return Err(DrishtiError::InferenceFailed(format!(
+                "model '{}' declares no recognized text inputs",
+                self.model_id
+            )));
+        }
+        Ok(feeds)
+    }
+}
+
+/// Register the configured execution provider on a session builder. CPU is a
+/// no-op (the ORT default). The GPU providers only exist in a build compiled
+/// with the matching cargo feature; on a CPU-only build an explicit GPU choice
+/// returns a clear error so a misconfigured node fails closed rather than
+/// silently running on the CPU.
+fn apply_execution_provider(
+    builder: SessionBuilder,
+    opts: &SessionOptions,
+) -> Result<SessionBuilder, DrishtiError> {
+    match opts.provider {
+        ExecutionProvider::Cpu => Ok(builder),
+        ExecutionProvider::Cuda => {
+            eprintln!(
+                "drishti: execution_provider=cuda (device {})",
+                opts.device_id
+            );
+            add_cuda(builder, opts.device_id, true)
+        }
+        ExecutionProvider::Tensorrt => {
+            eprintln!(
+                "drishti: execution_provider=tensorrt (device {})",
+                opts.device_id
+            );
+            add_tensorrt(builder, opts.device_id, true)
+        }
+        ExecutionProvider::Auto => auto_provider(builder, opts.device_id),
+    }
+}
+
+/// `auto`: try a GPU provider if one is compiled in, otherwise use the CPU.
+/// Never errors on account of a missing GPU (soft fallback), and logs the
+/// choice so an operator can confirm what actually ran.
+fn auto_provider(builder: SessionBuilder, device_id: i32) -> Result<SessionBuilder, DrishtiError> {
+    #[cfg(feature = "cuda")]
+    {
+        eprintln!("drishti: execution_provider=auto, registering CUDA with CPU fallback");
+        return add_cuda(builder, device_id, false);
+    }
+    #[cfg(all(not(feature = "cuda"), feature = "tensorrt"))]
+    {
+        eprintln!("drishti: execution_provider=auto, registering TensorRT with CPU fallback");
+        return add_tensorrt(builder, device_id, false);
+    }
+    #[cfg(all(not(feature = "cuda"), not(feature = "tensorrt")))]
+    {
+        let _ = device_id;
+        eprintln!("drishti: execution_provider=auto but no GPU provider is compiled in; using CPU");
+        Ok(builder)
+    }
+}
+
+#[cfg(feature = "cuda")]
+fn add_cuda(
+    builder: SessionBuilder,
+    device_id: i32,
+    hard: bool,
+) -> Result<SessionBuilder, DrishtiError> {
+    use ort::execution_providers::CUDAExecutionProvider;
+    let mut dispatch = CUDAExecutionProvider::default()
+        .with_device_id(device_id)
+        .build();
+    if hard {
+        dispatch = dispatch.error_on_failure();
+    }
+    builder
+        .with_execution_providers([dispatch])
+        .map_err(|e| DrishtiError::InferenceFailed(format!("register CUDA execution provider: {e}")))
+}
+
+#[cfg(not(feature = "cuda"))]
+fn add_cuda(
+    _builder: SessionBuilder,
+    _device_id: i32,
+    _hard: bool,
+) -> Result<SessionBuilder, DrishtiError> {
+    Err(DrishtiError::InvalidConfiguration(
+        "execution_provider = \"cuda\" requires a build with --features cuda; this binary is \
+         CPU-only. Rebuild drishti-core/drishti-server with the cuda feature, or use \
+         execution_provider = \"auto\" to fall back to the CPU."
+            .into(),
+    ))
+}
+
+#[cfg(feature = "tensorrt")]
+fn add_tensorrt(
+    builder: SessionBuilder,
+    device_id: i32,
+    hard: bool,
+) -> Result<SessionBuilder, DrishtiError> {
+    use ort::execution_providers::TensorRTExecutionProvider;
+    let mut dispatch = TensorRTExecutionProvider::default()
+        .with_device_id(device_id)
+        .build();
+    if hard {
+        dispatch = dispatch.error_on_failure();
+    }
+    builder.with_execution_providers([dispatch]).map_err(|e| {
+        DrishtiError::InferenceFailed(format!("register TensorRT execution provider: {e}"))
+    })
+}
+
+#[cfg(not(feature = "tensorrt"))]
+fn add_tensorrt(
+    _builder: SessionBuilder,
+    _device_id: i32,
+    _hard: bool,
+) -> Result<SessionBuilder, DrishtiError> {
+    Err(DrishtiError::InvalidConfiguration(
+        "execution_provider = \"tensorrt\" requires a build with --features tensorrt; this binary \
+         is CPU-only. Rebuild with the tensorrt feature, or use execution_provider = \"auto\" to \
+         fall back to the CPU."
+            .into(),
+    ))
 }
 
 /// Stream a file through SHA-256 without loading it all into memory.

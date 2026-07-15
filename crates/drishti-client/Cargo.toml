@@ -1,0 +1,31 @@
+[package]
+name = "sarthiai-drishti-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Remote client for a Drishti safety service; implements drishti_core::SafetyEngine over HTTP so a host can swap embedded for remote inference by changing one handle."
+
+# Published as `sarthiai-drishti-client`; imported in code as `drishti_client`.
+[lib]
+name = "drishti_client"
+
+# The Rust remote client. This is where tokio + an HTTP client live, which is
+# exactly why RemoteDrishti is here and not in the pure `drishti-core`.
+[dependencies]
+drishti-core = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# The parity example builds an embedded engine (needs the model loader) and
+# drives both it and a remote client, so it needs a tokio runtime.
+[dev-dependencies]
+drishti-models = { workspace = true }
+tokio = { workspace = true }
+
+[[example]]
+name = "parity"
+path = "examples/parity.rs"

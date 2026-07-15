@@ -1,6 +1,6 @@
 {
   "name": "sarthiai-drishti-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Thin remote HTTP client (SDK) for a running drishti-server content-safety service",
   "license": "Elastic-2.0",
   "author": "Chirotpal Das",

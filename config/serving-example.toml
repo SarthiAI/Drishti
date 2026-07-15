@@ -1,0 +1,67 @@
+# Example configuration for running Drishti as a separate (optionally GPU)
+# service. It is the same schema the CLI and the embedded library use, plus two
+# additive, optional things: an execution-provider choice and a [server] table.
+# Everything here is a configuration choice; nothing is compiled in.
+#
+# Point the three model sections at your chosen models (see config/example.toml
+# and MODELS.md). Only the serving-specific parts are shown in full below.
+
+# --- Execution provider (additive, optional) --------------------------------
+# Absent, or "cpu", is exactly today's behaviour. "cuda"/"tensorrt" run the
+# ONNX sessions on a GPU and require a binary built with that feature plus a
+# GPU-enabled libonnxruntime at ORT_DYLIB_PATH. "auto" tries a GPU and falls
+# back to the CPU. Overridable with DRISHTI_EXECUTION_PROVIDER.
+execution_provider = "cpu"    # "cpu" | "cuda" | "tensorrt" | "auto"
+gpu_device_id = 0             # used only when a GPU provider is selected
+
+intra_threads = 4
+
+# --- Server settings (additive, optional; env: DRISHTI_SERVER__*) -----------
+[server]
+# TLS. Serve HTTPS when both are set; otherwise plain HTTP (terminate TLS at a
+# proxy). Self-hosted, in-tenant only: the request text can carry end-user PII.
+# tls_cert_path = "/etc/drishti/tls/fullchain.pem"
+# tls_key_path  = "/etc/drishti/tls/privkey.pem"
+
+# Reject bodies larger than this (HTTP 413). Default 1 MiB.
+max_request_bytes = 1048576
+
+# Per-request timeout in milliseconds (HTTP 504). Default 30000.
+request_timeout_ms = 30000
+
+# Cap in-flight check requests; extra requests are shed with HTTP 503 rather
+# than queueing unboundedly. Default: unlimited. Set this on a GPU box to the
+# point past which latency degrades.
+# max_concurrency = 64
+
+# Max items a /batch endpoint accepts (HTTP 413 above it). Default 32.
+max_batch = 32
+
+# Operator-set model-set id that clients pin. When unset it is derived from the
+# loaded model manifest (a hash of each model id + sha256). A client that sends
+# a different id gets HTTP 409 and treats it as a fail-closed Unavailable.
+# model_set = "niyam-default-v1"
+
+# Debug ONLY. When true, request/response CONTENT (which can carry PII) is
+# written to logs. Off by default and loudly warned. Never enable in production.
+log_content = false
+
+# --- Model sections ---------------------------------------------------------
+# Fill these in exactly as in config/example.toml. For example:
+#
+# [prompt]
+# max_tokens = 512
+# positive_label = 1
+#   [prompt.model]
+#   id = "your-prompt-injection-model"
+#     [prompt.model.model]
+#     source = "remote"
+#     location = "https://.../model.onnx"
+#     sha256 = "..."
+#     [prompt.model.tokenizer]
+#     source = "remote"
+#     location = "https://.../tokenizer.json"
+#     sha256 = "..."
+#
+# [pii] ...
+# [output] ...

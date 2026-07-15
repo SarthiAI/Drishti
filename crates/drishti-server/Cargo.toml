@@ -15,10 +15,21 @@ path = "src/main.rs"
 drishti-core = { workspace = true }
 drishti-models = { workspace = true }
 axum = { workspace = true }
+axum-server = { workspace = true }
+rustls = { workspace = true }
 tokio = { workspace = true }
 tower-http = { workspace = true }
 futures = { workspace = true }
 clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+figment = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
 dotenvy = { workspace = true }
+
+[features]
+# Build the service with a GPU execution provider available. Passes through to
+# drishti-core; the config still decides whether a GPU is actually used.
+cuda = ["drishti-core/cuda"]
+tensorrt = ["drishti-core/tensorrt"]

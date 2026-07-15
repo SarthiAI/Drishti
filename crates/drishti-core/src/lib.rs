@@ -11,13 +11,16 @@ mod checks;
 pub mod config;
 mod engine;
 pub mod error;
+mod safety;
 mod source;
 pub mod types;
 
 use config::{DrishtiConfig, ModelEntry, OutputConfig, PiiConfig, PromptConfig};
-use engine::InferenceModel;
+use engine::{InferenceModel, SessionOptions};
 use error::DrishtiError;
 
+pub use error::SafetyError;
+pub use safety::SafetyEngine;
 pub use source::ModelSource;
 pub use types::{
     FullCheck, ModelManifest, ModelManifestEntry, OutputCheck, PiiCheck, PiiKind, PiiSource,
@@ -98,6 +101,48 @@ impl Drishti {
         Ok(full)
     }
 
+    /// Batched prompt-injection check: one forward pass over many inputs. Each
+    /// result is identical to calling [`Self::check_prompt`] on that input alone
+    /// (padding is masked out), so batching is a throughput optimization that
+    /// never changes a decision. This is what the server coalesces concurrent
+    /// requests into for GPU efficiency.
+    pub async fn check_prompt_batch(
+        &self,
+        inputs: &[&str],
+    ) -> Result<Vec<PromptCheck>, DrishtiError> {
+        let e = self
+            .prompt
+            .as_ref()
+            .ok_or(DrishtiError::CheckNotEnabled("prompt"))?;
+        checks::prompt::run_batch(&e.model, &e.cfg, inputs)
+    }
+
+    /// Batched output-safety check: one forward pass over many outputs. Each
+    /// result is identical to [`Self::check_output`] on that output alone.
+    pub async fn check_output_batch(
+        &self,
+        outputs: &[&str],
+    ) -> Result<Vec<OutputCheck>, DrishtiError> {
+        let e = self
+            .output
+            .as_ref()
+            .ok_or(DrishtiError::CheckNotEnabled("output"))?;
+        checks::output::run_batch(&e.model, &e.cfg, outputs)
+    }
+
+    /// Batched PII check. The regex stage is already cheap and the NER stage
+    /// carries per-input byte offsets, so this runs each input in turn rather
+    /// than as one padded tensor; it exists so a caller has one uniform batch
+    /// surface across all three checks. Results are identical to per-input
+    /// [`Self::check_pii`].
+    pub async fn check_pii_batch(&self, inputs: &[&str]) -> Result<Vec<PiiCheck>, DrishtiError> {
+        let mut out = Vec::with_capacity(inputs.len());
+        for &text in inputs {
+            out.push(self.check_pii(text).await?);
+        }
+        Ok(out)
+    }
+
     /// The loaded model identities, for audit. See invariant I6.
     pub fn model_manifest(&self) -> ModelManifest {
         let mut models = Vec::new();
@@ -147,11 +192,18 @@ impl DrishtiBuilder {
     /// check has no usable model.
     pub fn build(self, source: &dyn ModelSource) -> Result<Drishti, DrishtiError> {
         let cfg = self.config;
-        let intra = cfg.intra_threads;
+        // One runtime setup shared by every session: execution provider, GPU
+        // device, and intra-op threads. Defaults to CPU, so absent GPU config is
+        // exactly today's behaviour.
+        let opts = SessionOptions {
+            provider: cfg.execution_provider,
+            device_id: cfg.gpu_device_id,
+            intra_threads: cfg.intra_threads,
+        };
 
         let prompt = match cfg.prompt {
             Some(pc) => {
-                let model = load_model(source, &pc.model, pc.max_tokens, intra)?;
+                let model = load_model(source, &pc.model, pc.max_tokens, &opts)?;
                 Some(PromptEngine { model, cfg: pc })
             }
             None => None,
@@ -161,7 +213,7 @@ impl DrishtiBuilder {
             Some(pii_cfg) => {
                 let ner = match pii_cfg.ner.as_ref() {
                     Some(ner_cfg) => {
-                        Some(load_model(source, &ner_cfg.model, ner_cfg.max_tokens, intra)?)
+                        Some(load_model(source, &ner_cfg.model, ner_cfg.max_tokens, &opts)?)
                     }
                     None => None,
                 };
@@ -172,7 +224,7 @@ impl DrishtiBuilder {
 
         let output = match cfg.output {
             Some(oc) => {
-                let model = load_model(source, &oc.model, oc.max_tokens, intra)?;
+                let model = load_model(source, &oc.model, oc.max_tokens, &opts)?;
                 Some(OutputEngine { model, cfg: oc })
             }
             None => None,
@@ -197,9 +249,9 @@ fn load_model(
     source: &dyn ModelSource,
     entry: &ModelEntry,
     max_tokens: usize,
-    intra: Option<usize>,
+    opts: &SessionOptions,
 ) -> Result<InferenceModel, DrishtiError> {
     let model_path = source.fetch(&entry.id, &entry.model)?;
     let tokenizer_path = source.fetch(&entry.id, &entry.tokenizer)?;
-    InferenceModel::load(&model_path, &tokenizer_path, entry.id.clone(), max_tokens, intra)
+    InferenceModel::load(&model_path, &tokenizer_path, entry.id.clone(), max_tokens, opts)
 }

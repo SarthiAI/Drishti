@@ -251,10 +251,21 @@ when one is configured; health and metrics are always open.
 | POST | `/v1/check/pii` | `{ "input": "..." }` | bearer |
 | POST | `/v1/check/output` | `{ "output": "..." }` | bearer |
 | POST | `/v1/check/all` | `{ "prompt": "...", "output": "..." }` | bearer |
+| POST | `/v1/check/prompt/batch` | `{ "inputs": ["...", "..."] }` | bearer |
+| POST | `/v1/check/pii/batch` | `{ "inputs": ["...", "..."] }` | bearer |
+| POST | `/v1/check/output/batch` | `{ "outputs": ["...", "..."] }` | bearer |
 | GET | `/v1/manifest` | loaded model ids and hashes | bearer |
+| GET | `/v1/version` | drishti version and model-set id | open |
 | GET | `/healthz` | liveness | open |
-| GET | `/readyz` | models loaded | open |
+| GET | `/readyz` | 200 only when models are loaded | open |
 | GET | `/metrics` | Prometheus text | open |
+
+Every check body also accepts an optional `"model_set": "<id>"`. When present it
+is checked against the loaded set and a mismatch returns HTTP 409; when absent
+(the default) it is ignored, so existing callers are unaffected. Running Drishti
+as a separate, optionally GPU-backed service that many gateways share, and the
+optional TLS, timeout, size, and concurrency limits, are covered in
+[SERVING.md](SERVING.md).
 
 ```bash
 curl -s -X POST http://localhost:8080/v1/check/pii \
@@ -265,9 +276,12 @@ curl -s -X POST http://localhost:8080/v1/check/pii \
 
 Prefer a typed client over raw HTTP? Remote client SDKs for Python
 (`sarthiai-drishti-sdk`) and Node (`sarthiai-drishti-sdk`) live in [clients/](clients/),
-each with its own README. They call a running `drishti-server` and return typed
-results; they load no model themselves. This is distinct from the in-process
-Python package (`import drishti`) shown above, which runs the models locally.
+each with its own README, and a Rust client (`sarthiai-drishti-client`, a
+`RemoteDrishti` that implements the same `SafetyEngine` trait as the embedded
+engine) lives in [crates/drishti-client/](crates/drishti-client/). They call a
+running `drishti-server` and return typed results; they load no model themselves.
+This is distinct from the in-process Python package (`import drishti`) shown
+above, which runs the models locally.
 
 ---
 

@@ -6,7 +6,7 @@ name: release
 #   - PyPI: `sarthiai-drishti` (embedded PyO3 wheels + sdist; imported as `drishti`)
 #   - PyPI: `sarthiai-drishti-sdk` (pure remote client SDK; imported as `drishti_sdk`)
 #   - npm:  `sarthiai-drishti-sdk` (remote client SDK, ESM + CJS + types)
-#   - crates.io: sarthiai-drishti-regex, sarthiai-drishti-core, sarthiai-drishti-models (dep order)
+#   - crates.io: sarthiai-drishti-regex, sarthiai-drishti-core, sarthiai-drishti-models, sarthiai-drishti-client (dep order)
 #   - Docker Hub: `sarthiai/drishti` (multi-arch server image)
 #
 # All components share the tag version; the `guard` job fails the run early if
@@ -159,13 +159,16 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
-          # regex has no internal deps; core depends on regex; models on core.
+          # regex has no internal deps; core depends on regex; models and client
+          # depend on core. Publish in dependency order.
           # Sleep between to let the crates.io index propagate the new versions.
           cargo publish -p sarthiai-drishti-regex
           sleep 45
           cargo publish -p sarthiai-drishti-core
           sleep 45
           cargo publish -p sarthiai-drishti-models
+          sleep 45
+          cargo publish -p sarthiai-drishti-client
 
   docker:
     name: build and push sarthiai/drishti
